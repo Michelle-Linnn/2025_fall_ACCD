@@ -1,0 +1,55 @@
+<main>
+    <section class="gallery">
+        <!-- 缩略图在上方 -->
+        <div class="thumbnails">
+            <img src="https://picsum.photos/id/1015/150/100" alt="Thumb1" onclick="showImage(this)">
+            <img src="https://picsum.photos/id/1016/150/100" alt="Thumb2" onclick="showImage(this)">
+            <img src="https://picsum.photos/id/1018/150/100" alt="Thumb3" onclick="showImage(this)">
+            <img src="https://picsum.photos/id/1020/150/100" alt="Thumb4" onclick="showImage(this)">
+        </div>
+
+        <!-- 大图展示区域 -->
+        <div class="large-image">
+            <img id="displayedImage" src="https://picsum.photos/id/1015/600/400" alt="Large View">
+        </div>
+    </section>
+</main>
+
+<script>
+    // 切换大图
+    function showImage(imgElement){
+        let largeImage = document.getElementById("displayedImage");
+        largeImage.src = imgElement.src.replace("150/100", "600/400");
+    }
+</script>
+
+<style>
+    .gallery{
+        text-align: center;
+        margin: 20px auto;
+        max-width: 700px;
+    }
+    .large-image img{
+        width: 100%;
+        max-width: 600px;
+        border: 3px solid #333;
+        border-radius: 10px;
+        margin-top: 20px;
+    }
+    .thumbnails{
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin-bottom: 10px;
+    }
+    .thumbnails img{
+        cursor: pointer;
+        border: 2px solid transparent;
+        border-radius: 6px;
+        transition: 0.3s;
+    }
+    .thumbnails img:hover{
+        border: 2px solid rgb(234, 164, 189);
+        transform: scale(1.05);
+    }
+</style>
