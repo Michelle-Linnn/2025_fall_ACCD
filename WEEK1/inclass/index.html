@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        body{
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+        header{
+            background-color: rgb(234, 164, 189);
+        }
+
+        nav ul{
+            margin: 0;
+            padding: 25px;
+            list-style: none;
+        }
+        nav ul li{
+            margin: 10px auto 10px auto;
+            text-align: center;
+            border-bottom: 2px solid black;
+            padding-bottom: 15px;
+        }
+        nav ul li:last-child{
+            border: none;
+        }
+        nav ul a{
+               text-decoration: none;
+               color: black;
+               text-transform: uppercase;
+        }
+
+        .active{
+            font-weight: bold;
+        }
+
+        .cursive{
+            font-style: italic;
+        }
+        @media(min-width:765px){
+            nav ul{
+                display: flex;
+            }
+            nav ul li{
+                border-bottom: none;
+                margin: 10px;
+                padding: 0;
+            }
+
+        }
+        
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul>
+                <li><a href="#">Home</a></li>
+                <li><a href="#">Work</a></li>
+                <li><a href="#">Blog</a></li>
+                <li><a href="#">Resume</a></li> 
+            </ul>
+        </nav>
+    </header>
+    <main>
+    <p class="cursive">Lorem ipsum dolor, sit amet consectetur adipisicing elit. Adipisci enim tempora ipsam obcaecati cumque perferendis, minus error quia fugiat tempore quidem non consequuntur veniam eveniet? Nam itaque necessitatibus illo possimus.</p>
+
+</main>
+
+    <footer></footer>
+</body>
+</html>
