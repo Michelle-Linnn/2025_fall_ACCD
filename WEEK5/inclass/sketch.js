@@ -4,8 +4,10 @@ function setup() {
 }
 
 function draw() {
+  background(0,0,0)
   for(let i = 0;i < 8; i++)
-circle(random);
+    fill(random(360),80,100)
+  circle(random(width),random(height),50);
 }
 
 
