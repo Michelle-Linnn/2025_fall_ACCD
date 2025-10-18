@@ -1,58 +1,79 @@
-// --- GLOBAL VARIABLES ---
-let orbs = [];
-let numOrbs = 20;
-let img;
+let images = [];
+let currentImg;
 let sound;
+let pos, vel;
+let noiseOffset = 0;
+let started = false; 
 
 function preload() {
-  // Add your own image and sound file paths here
-  img = loadImage("orb_texture.jpeg"); // e.g. small glowing circle image
-  sound = loadSound("ambient.mp3");   // e.g. ambient background sound
+  images.push(loadImage("assets/orb_texture.jpeg"));
+  images.push(loadImage("assets/photo.php.jpeg"));
+  sound = loadSound("assets/sound.mp3");
 }
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
-  noStroke();
   imageMode(CENTER);
-
-  // Create orbs with random noise offsets
-  for (let i = 0; i < numOrbs; i++) {
-    orbs.push(new Orb(random(1000), random(1000), random(50, 150)));
-  }
-
-  // Play ambient sound loop
-  sound.loop();
+  textAlign(CENTER, CENTER);
+  textSize(24);
+  fill(255);
+  pos = createVector(random(width), random(height));
+  vel = p5.Vector.random2D().mult(5);
+  currentImg = random(images);
 }
 
 function draw() {
-  background(10, 20, 30, 30); // semi-transparent background for trail effect
+  background(0);
 
-  for (let orb of orbs) {
-    orb.move();
-    orb.display();
+  if (!started) {
+    
+    text("Click anywhere to start", width / 2, height / 2);
+    return;
+  }
+
+  image(currentImg, pos.x, pos.y, 200, 200);
+  pos.add(vel);
+
+  let hitWall = false;
+  if (pos.x > width - 100 || pos.x < 100) {
+    vel.x *= -1;
+    hitWall = true;
+  }
+  if (pos.y > height - 100 || pos.y < 100) {
+    vel.y *= -1;
+    hitWall = true;
+  }
+
+  if (hitWall) {
+    playSoundOnce();
+    changeDirection();
+    changeImage();
   }
 }
 
-class Orb {
-  constructor(xoff, yoff, size) {
-    this.xoff = xoff;
-    this.yoff = yoff;
-    this.size = size;
-    this.color = color(random(100,255), random(100,255), random(200,255), 180);
+function mousePressed() {
+  
+  if (!started) {
+    userStartAudio();
+    started = true;
   }
+}
 
-  move() {
-    // Non-linear smooth motion using Perlin noise
-    this.x = noise(this.xoff) * width;
-    this.y = noise(this.yoff) * height;
+function playSoundOnce() {
+  if (sound.isPlaying()) sound.stop();
+  sound.play();
+}
 
-    // Gradually shift noise offsets
-    this.xoff += 0.002;
-    this.yoff += 0.002;
+function changeDirection() {
+  noiseOffset += 0.1;
+  let angle = noise(noiseOffset) * TWO_PI;
+  vel.rotate(angle / 5);
+}
+
+function changeImage() {
+  let newImg = random(images);
+  while (newImg === currentImg && images.length > 1) {
+    newImg = random(images);
   }
-
-  display() {
-    tint(this.color);
-    image(img, this.x, this.y, this.size, this.size);
-  }
+  currentImg = newImg;
 }
