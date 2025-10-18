@@ -11,6 +11,7 @@ function preload() {
   sound = loadSound("assets/sound.mp3");
 }
 
+
 function setup() {
   createCanvas(windowWidth, windowHeight);
   imageMode(CENTER);
