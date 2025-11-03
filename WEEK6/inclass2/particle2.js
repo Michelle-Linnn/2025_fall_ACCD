@@ -14,27 +14,11 @@ class Particle{
   }
   
   applyForce(_force){
-
+    this.acc.add(_force)
   }
-
-  bounce(){
-      if(this.pos.x + this.radius >width){
-        this.pos.x = width -this.radius
-        this.vel.x *= -1
-      } 
-      if(this.pos.x - this.radius < 0){
-        this.pos.x = 0 + this.radius  
-        this.vel.x *= -1
-      }
-      if(this.pos.y + this.radius >height){
-        this.pos.y = height -this.radius
-        this.vel.y *= -1
-      } 
-      if(this.pos.y - this.radius < 0){
-        this.pos.y = 0 + this.radius  
-        this.vel.y *= -1
-      }
-  }
+  
+ 
+  
   display(){
     fill(this. clr)
     circle(this.pos.x,this.pos.y,this.radius*2)
