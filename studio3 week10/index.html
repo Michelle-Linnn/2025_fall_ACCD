@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Image ↔ Sound Interaction</title>
+  <style>
+    :root{--bg:#0f1724;--panel:#0b1220;--accent:#7dd3fc;--muted:#94a3b8}
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;background:linear-gradient(180deg,#071128 0%, #071a2a 100%);color:#e6eef6}
+    .wrap{max-width:1000px;margin:28px auto;padding:20px;background:rgba(255,255,255,0.02);border-radius:12px;box-shadow:0 6px 30px rgba(2,6,23,0.6)}
+    h1{margin:0 0 8px;font-size:20px}
+    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+    label.button{
+      background:linear-gradient(90deg, rgba(125,211,252,0.12), rgba(125,211,252,0.06));
+      color:var(--accent);padding:8px 12px;border-radius:8px;border:1px solid rgba(125,211,252,0.12);
+      cursor:pointer;font-weight:600;font-size:14px;
+    }
+    input[type=file]{display:none}
+    .small{font-size:13px;color:var(--muted)}
+    canvas{display:block;margin:18px auto;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:10px}
+    .controls{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .toggle{padding:6px 10px;border-radius:8px;background:#07172a;border:1px solid rgba(255,255,255,0.03);cursor:pointer}
+    .info{font-size:13px;color:var(--muted);margin-left:6px}
+    .footer{margin-top:14px;color:var(--muted);font-size:13px}
+    .range{appearance:none;height:6px;border-radius:6px;background:rgba(255,255,255,0.06);outline:none}
+    .btn-danger{background:linear-gradient(90deg,#ff7b7b,#ffb3b3);border:none;color:#111;padding:6px 10px;border-radius:8px;cursor:pointer}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Image ↔ Sound Interaction — 图像与声音交互 Demo</h1>
+    <div class="row">
+      <label class="button">选择图片
+        <input id="imgInput" type="file" accept="image/*">
+      </label>
+      <label class="button">选择音频
+        <input id="audioInput" type="file" accept="audio/*">
+      </label>
+      <button id="micBtn" class="toggle">使用麦克风 (Microphone)</button>
+      <button id="playBtn" class="toggle">播放 / 暂停</button>
+      <button id="stopBtn" class="btn-danger">停止</button>
+      <div class="info" id="status">未加载图片或音频。</div>
+    </div>
+
+    <canvas id="canvas" width="900" height="600"></canvas>
+
+    <div class="controls">
+      <div class="small">敏感度 (Sensitivity)</div>
+      <input id="sens" class="range" type="range" min="0.2" max="3" step="0.01" value="1.0">
+      <div class="small">低频权重 (Bass)</div>
+      <input id="bass" class="range" type="range" min="0" max="2" step="0.01" value="1.0">
+      <div class="small">视觉强度 (Visual Intensity)</div>
+      <input id="intensity" class="range" type="range" min="0" max="2" step="0.01" value="1.0">
+    </div>
+
+    <div class="footer">提示：你可以上传任意图片与音频，或使用麦克风实时说话，看看图片如何随声音“呼吸”。</div>
+  </div>
+
+  <audio id="audio" crossorigin="anonymous"></audio>
+
+  <script>
+  // 简要说明（中文/English）
+  // 这个脚本通过 Web Audio API 创建 AnalyserNode，分析音频频谱（frequency data）。
+  // 然后根据低频能量和总能量来驱动 canvas 上的图片变换、模糊光晕和色彩偏移。
+
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d',{willReadFrequently:false});
+  const imgInput = document.getElementById('imgInput');
+  const audioInput = document.getElementById('audioInput');
+  const audioEl = document.getElementById('audio');
+  const micBtn = document.getElementById('micBtn');
+  const playBtn = document.getElementById('playBtn');
+  const stopBtn = document.getElementById('stopBtn');
+  const status = document.getElementById('status');
+  const sensControl = document.getElementById('sens');
+  const bassControl = document.getElementById('bass');
+  const intensityControl = document.getElementById('intensity');
+
+  let image = null;
+  let audioCtx = null;
+  let analyser = null;
+  let sourceNode = null;
+  let dataArray = null;
+  let freqArray = null;
+  let rafId = null;
+  let usingMic = false;
+  let mediaStream = null;
+
+  // load image
+  imgInput.addEventListener('change', e=>{
+    const f = e.target.files[0];
+    if(!f) return;
+    const url = URL.createObjectURL(f);
+    const i = new Image();
+    i.onload = ()=>{ image = i; centerImage(); status.textContent = '图片已加载。'; URL.revokeObjectURL(url); }
+    i.src = url;
+  });
+
+  // load audio file
+  audioInput.addEventListener('change', async e=>{
+    const f = e.target.files[0];
+    if(!f) return;
+    usingMic = false;
+    stopMicIfNeeded();
+    const url = URL.createObjectURL(f);
+    audioEl.src = url;
+    audioEl.loop = true;
+    await audioEl.play().catch(()=>{ /* autoplay might be blocked; user can press play */ });
+    initAudioProcessing();
+    status.textContent = `音频已加载：${f.name}`;
+  });
+
+  // play / pause
+  playBtn.addEventListener('click', async ()=>{
+    if(usingMic){
+      status.textContent = '使用麦克风中，麦克风已激活。';
+      return;
+    }
+    if(!audioEl.src) { status.textContent='请先上传音频或选择麦克风。'; return; }
+    if(audioEl.paused){
+      await audioEl.play();
+      playBtn.textContent = '暂停';
+      initAudioProcessing();
+      status.textContent = '播放音频中。';
+    } else {
+      audioEl.pause();
+      playBtn.textContent = '播放 / 暂停';
+      status.textContent = '音频已暂停。';
+    }
+  });
+
+  stopBtn.addEventListener('click', ()=>{
+    if(audioEl.src){ audioEl.pause(); audioEl.currentTime = 0; playBtn.textContent = '播放 / 暂停'; }
+    stopMicIfNeeded();
+    tearDownAudio();
+    status.textContent = '已停止。';
+  });
+
+  // microphone
+  micBtn.addEventListener('click', async ()=>{
+    if(usingMic){
+      stopMicIfNeeded();
+      return;
+    }
+    try {
+      mediaStream = await navigator.mediaDevices.getUserMedia({audio:true, video:false});
+      usingMic = true;
+      audioEl.srcObject = null;
+      initAudioProcessingFromStream(mediaStream);
+      status.textContent = '麦克风已连接（说话或发出声音来查看效果）。';
+      micBtn.textContent = '停止麦克风';
+    } catch(err){
+      status.textContent = '无法访问麦克风：' + err.message;
+      console.error(err);
+    }
+  });
+
+  function stopMicIfNeeded(){
+    if(mediaStream){
+      let tracks = mediaStream.getTracks();
+      tracks.forEach(t=>t.stop());
+      mediaStream = null;
+    }
+    usingMic = false;
+    micBtn.textContent = '使用麦克风 (Microphone)';
+  }
+
+  // audio context and analyser setup (from audio element)
+  function initAudioProcessing(){
+    if(window.AudioContext == null && window.webkitAudioContext) window.AudioContext = window.webkitAudioContext;
+    if(!audioCtx) audioCtx = new AudioContext();
+    if(sourceNode) {
+      try { sourceNode.disconnect(); } catch(e){}
+    }
+    sourceNode = audioCtx.createMediaElementSource(audioEl);
+    createAnalyserAndStart(sourceNode);
+  }
+
+  // init from MediaStream (mic)
+  function initAudioProcessingFromStream(stream){
+    if(window.AudioContext == null && window.webkitAudioContext) window.AudioContext = window.webkitAudioContext;
+    if(!audioCtx) audioCtx = new AudioContext();
+    if(sourceNode) {
+      try { sourceNode.disconnect(); } catch(e){}
+    }
+    sourceNode = audioCtx.createMediaStreamSource(stream);
+    createAnalyserAndStart(sourceNode);
+  }
+
+  function createAnalyserAndStart(source){
+    tearDownAudio(); // clean previous analyser/raf
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 2048; // higher -> more frequency precision
+    const bufferLength = analyser.frequencyBinCount;
+    dataArray = new Uint8Array(bufferLength);
+    freqArray = new Uint8Array(bufferLength);
+    source.connect(analyser);
+    analyser.connect(audioCtx.destination); // let it pass through (for file). For mic, it won't echo.
+    render();
+  }
+
+  function tearDownAudio(){
+    if(rafId) cancelAnimationFrame(rafId);
+    rafId = null;
+    analyser = null;
+    dataArray = null;
+    freqArray = null;
+    // do not close audioCtx to allow reuse; closing might require user gesture to reopen
+  }
+
+  // get average and low-frequency energy
+  function analyzeAudio(){
+    if(!analyser) return {avg:0, bass:0};
+    analyser.getByteTimeDomainData(dataArray);
+    analyser.getByteFrequencyData(freqArray);
+    // compute RMS-like average from time domain
+    let sum = 0;
+    for(let i=0;i<dataArray.length;i++){
+      const v = (dataArray[i]-128)/128;
+      sum += v*v;
+    }
+    const rms = Math.sqrt(sum / dataArray.length); // 0..~1
+    // low frequency average (e.g. first 10% of bins)
+    const lowBins = Math.max(3, Math.floor(freqArray.length * 0.12));
+    let lowSum = 0;
+    for(let i=0;i<lowBins;i++) lowSum += freqArray[i];
+    const lowAvg = lowSum / (lowBins * 255); // 0..1
+    return {avg: rms, bass: lowAvg, freq: freqArray};
+  }
+
+  // drawing & visual response
+  let imgScale = 1;
+  let imgX = canvas.width/2;
+  let imgY = canvas.height/2;
+  let imgW = 400, imgH = 300;
+
+  function centerImage(){
+    if(!image) return;
+    // fit within canvas with margin
+    const maxW = canvas.width * 0.8;
+    const maxH = canvas.height * 0.8;
+    let w = image.width, h = image.height;
+    const ratio = Math.min(maxW / w, maxH / h, 1);
+    imgW = w * ratio;
+    imgH = h * ratio;
+    imgX = (canvas.width - imgW) / 2;
+    imgY = (canvas.height - imgH) / 2;
+  }
+
+  window.addEventListener('resize', ()=>{
+    // keep canvas reasonable sized
+    const maxW = Math.min(1100, window.innerWidth - 80);
+    canvas.width = maxW;
+    canvas.height = Math.min(700, Math.round(window.innerHeight * 0.6));
+    centerImage();
+  });
+  // initialize size
+  (function initCanvasSize(){
+    const maxW = Math.min(1100, window.innerWidth - 80);
+    canvas.width = maxW;
+    canvas.height = Math.min(700, Math.round(window.innerHeight * 0.6));
+  })();
+
+  // render loop
+  function render(){
+    rafId = requestAnimationFrame(render);
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    // background subtle gradient
+    const g = ctx.createLinearGradient(0,0,0,canvas.height);
+    g.addColorStop(0, 'rgba(10,16,28,0.7)');
+    g.addColorStop(1, 'rgba(6,10,18,0.9)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    // analyze sound
+    const a = analyzeAudio();
+    // sensitivity controls
+    const sens = parseFloat(sensControl.value);
+    const bassMul = parseFloat(bassControl.value);
+    const visualIntensity = parseFloat(intensityControl.value);
+
+    // compute drives
+    const drive = Math.min(5, 1 + a.avg * 12 * sens * visualIntensity); // scale factor from RMS
+    const bassDrive = Math.min(3, 1 + a.bass * 6 * bassMul * visualIntensity);
+    // subtle wobble
+    const time = Date.now() * 0.002;
+    const wobbleX = Math.sin(time*1.2) * 4 * a.avg * sens;
+    const wobbleY = Math.cos(time*1.5) * 3 * a.avg * sens;
+
+    if(image){
+      // draw glow / blurred colored ring based on bass
+      const glow = Math.min(140, 30 + a.bass * 400 * visualIntensity);
+      ctx.save();
+      ctx.globalAlpha = 0.12 + a.bass * 0.6;
+      const cx = imgX + imgW/2 + wobbleX;
+      const cy = imgY + imgH/2 + wobbleY;
+      // radial gradient glow
+      const rg = ctx.createRadialGradient(cx,cy, Math.max(imgW,imgH)*0.05, cx,cy, Math.max(imgW,imgH)*0.6 + glow);
+      rg.addColorStop(0, 'rgba(125,211,252,0.35)');
+      rg.addColorStop(0.35, 'rgba(34,211,153,0.18)');
+      rg.addColorStop(1, 'rgba(125,211,252,0)');
+      ctx.fillStyle = rg;
+      ctx.beginPath();
+      ctx.arc(cx, cy, Math.max(imgW,imgH)*0.6 + glow, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+
+      // draw image with transform (scale & slight rotation)
+      ctx.save();
+      const centerX = imgX + imgW/2 + wobbleX;
+      const centerY = imgY + imgH/2 + wobbleY;
+      const scale = 1 + (drive - 1) * 0.35 * Math.min(1.7, visualIntensity);
+      const rot = (a.avg * 0.6 - a.bass * 0.4) * 0.15; // small rotation by audio
+      ctx.translate(centerX, centerY);
+      ctx.rotate(rot);
+      ctx.scale(scale, scale);
+
+      // subtle color shift using composite
+      // draw base image
+      ctx.drawImage(image, -imgW/2, -imgH/2, imgW, imgH);
+
+      // optional: color overlay for 'chromatic' effect controlled by frequency
+      const chroma = Math.min(0.6, a.bass * 1.6);
+      if(chroma > 0.02){
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = 0.06 + chroma*0.3;
+        ctx.fillStyle = `rgba(${Math.floor(200 + a.bass*55)}, ${Math.floor(180 + a.avg*60)}, ${Math.floor(230 - a.bass*100)}, 1)`;
+        ctx.fillRect(-imgW/2, -imgH/2, imgW, imgH);
+        ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = 'source-over';
+      }
+
+      ctx.restore();
+
+      // edge vignette
+      ctx.save();
+      const vign = ctx.createRadialGradient(canvas.width/2, canvas.height/2, Math.max(canvas.width,canvas.height)*0.2, canvas.width/2, canvas.height/2, Math.max(canvas.width,canvas.height)*0.9);
+      vign.addColorStop(0, 'rgba(0,0,0,0)');
+      vign.addColorStop(1, 'rgba(0,0,0,0.35)');
+      ctx.fillStyle = vign;
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.restore();
+    } else {
+      // placeholder text
+      ctx.save();
+      ctx.fillStyle = '#a8c1d6';
+      ctx.font = '18px system-ui, Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('请上传图片 (Choose an image) 并上传音频或启用麦克风', canvas.width/2, canvas.height/2);
+      ctx.restore();
+    }
+
+    // small debug: draw a simple frequency bar at bottom
+    if(analyser && freqArray){
+      const barH = 70;
+      const barW = canvas.width / freqArray.length;
+      for(let i=0;i<freqArray.length;i+=Math.ceil(freqArray.length/60)){
+        const v = freqArray[i] / 255;
+        ctx.fillStyle = `rgba(125,211,252,${0.08 + v*0.6})`;
+        ctx.fillRect(i*barW, canvas.height - barH, barW * Math.ceil(freqArray.length/60), -v * barH);
+      }
+    }
+  }
+
+  // cleanup when leaving page
+  window.addEventListener('beforeunload', ()=>{
+    stopMicIfNeeded();
+    if(audioCtx && audioCtx.state !== 'closed'){
+      try { audioCtx.close(); } catch(e){}
+    }
+  });
+
+  </script>
+</body>
+</html>

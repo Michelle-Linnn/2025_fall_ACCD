@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Image ↔ Sound — Shatter / Pixel / Glitch / Acid</title>
+<style>
+  :root{--bg:#070814;--panel:#061021;--accent:#7ee7b8;--muted:#9fb0c6}
+  html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;background:linear-gradient(180deg,#020612,#071022);color:#e6eef6}
+  .wrap{max-width:1100px;margin:22px auto;padding:18px;background:rgba(255,255,255,0.02);border-radius:12px}
+  h1{margin:0 0 8px;font-size:20px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  label.button{background:linear-gradient(90deg, rgba(126,231,184,0.08), rgba(126,231,184,0.03));color:var(--accent);padding:8px 12px;border-radius:8px;border:1px solid rgba(126,231,184,0.06);cursor:pointer;font-weight:600;font-size:14px}
+  input[type=file]{display:none}
+  .small{font-size:13px;color:var(--muted)}
+  canvas{display:block;margin:16px auto;background:#031026;border-radius:10px;max-width:100%}
+  .controls{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .panel{background:rgba(255,255,255,0.02);padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.02)}
+  .row-cols{display:flex;gap:8px}
+  .toggle{padding:6px 10px;border-radius:8px;background:#07172a;border:1px solid rgba(255,255,255,0.03);cursor:pointer}
+  input.range{appearance:none;height:6px;border-radius:6px;background:rgba(255,255,255,0.04);outline:none;width:140px}
+  .label-inline{display:flex;align-items:center;gap:8px}
+  .footer{margin-top:12px;color:var(--muted);font-size:13px}
+  .btn-danger{background:linear-gradient(90deg,#ff7b7b,#ffb3b3);border:none;color:#111;padding:6px 10px;border-radius:8px;cursor:pointer}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Image ↔ Sound Interaction</h1>
+    <div class="row">
+      <label class="button"> Choose Image
+        <input id="imgInput" type="file" accept="image/*">
+      </label>
+      <label class="button">Choose Audio
+        <input id="audioInput" type="file" accept="audio/*">
+      </label>
+      <button id="micBtn" class="toggle">Microphone</button>
+      <button id="playBtn" class="toggle">Pause</button>
+      <button id="stopBtn" class="btn-danger">Stop</button>
+      <div class="small" id="status">(Status: waiting for image/audio)</div>
+    </div>
+
+    <canvas id="canvas" width="900" height="600"></canvas>
+
+    <div class="controls">
+      <div class="panel">
+        <div class="small"><strong>Effects </strong></div>
+        <div class="row-cols" style="margin-top:8px;">
+          <label class="label-inline"><input type="checkbox" id="t_pixel" checked> emo</label>
+          <label class="label-inline"><input type="checkbox" id="t_shard" checked> sad</label>
+          <label class="label-inline"><input type="checkbox" id="t_glitch" checked> crazy</label>
+          <label class="label-inline"><input type="checkbox" id="t_acid" checked> mad</label>
+          <label class="label-inline"><input type="checkbox" id="t_localwarp" checked> cry</label>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="small"><strong>Parameters / 参数</strong></div>
+        <div style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap;">
+          <div class="label-inline"><div class="small">敏感度 / Sens</div><input id="sens" class="range" type="range" min="0.2" max="3" step="0.01" value="1.0"></div>
+          <div class="label-inline"><div class="small">像素级别 / Pixel</div><input id="pixelSize" class="range" type="range" min="2" max="60" step="1" value="18"></div>
+          <div class="label-inline"><div class="small">碎片数 / Shards</div><input id="shardCount" class="range" type="range" min="8" max="160" step="1" value="48"></div>
+          <div class="label-inline"><div class="small">故障强度 / Glitch</div><input id="glitchStr" class="range" type="range" min="0" max="1" step="0.01" value="0.45"></div>
+          <div class="label-inline"><div class="small">酸性强度 / Acid</div><input id="acidStr" class="range" type="range" min="0" max="1.8" step="0.01" value="0.9"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">Tip: Speak or play music to observe changes; experiment with different parameter combinations to achieve your desired style (Pixelate + Glitch + Acidic Colors often yields a "cyber-acidic" visual effect).。</div>
+  </div>
+
+  <audio id="audio" crossorigin="anonymous"></audio>
+
+<script>
+/* 关键思路（简短）：
+ - 离屏 canvas 存放原始图片（offscreenImg），绘制到主 canvas 时根据选项做：
+   1) Pixelation: 以较低分辨率 drawImage 再放大（高效）。
+   2) Shards: 将图片切成 precomputed rectangles，每帧根据声音偏移/旋转绘制（避免每帧重切）。
+   3) Glitch: 随机横向 slice copy + 偏移并错位颜色通道。
+   4) Acid: 在画面上叠加基于低频的发光色带 & RGB偏移。
+   5) Local warp: 生成若干“吸附点”，用频谱驱动周围像素的放射位移（基于 drawImage +局部偏移）。
+ - 使用 WebAudio Analyser 获取 avg / bass / freq，驱动参数。
+ - 性能注意：像素化用小 canvas，碎片预计算，尽量避免 full-image getImageData 每帧。
+*/
+
+// 元素
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const imgInput = document.getElementById('imgInput');
+const audioInput = document.getElementById('audioInput');
+const audioEl = document.getElementById('audio');
+const micBtn = document.getElementById('micBtn');
+const playBtn = document.getElementById('playBtn');
+const stopBtn = document.getElementById('stopBtn');
+const status = document.getElementById('status');
+
+// toggles & params
+const t_pixel = document.getElementById('t_pixel');
+const t_shard = document.getElementById('t_shard');
+const t_glitch = document.getElementById('t_glitch');
+const t_acid = document.getElementById('t_acid');
+const t_localwarp = document.getElementById('t_localwarp');
+const sensControl = document.getElementById('sens');
+const pixelSizeControl = document.getElementById('pixelSize');
+const shardCountControl = document.getElementById('shardCount');
+const glitchStrControl = document.getElementById('glitchStr');
+const acidStrControl = document.getElementById('acidStr');
+
+let image = null;
+let offImg = document.createElement('canvas'); // offscreen original
+let offCtx = offImg.getContext('2d');
+
+let audioCtx = null;
+let analyser = null;
+let sourceNode = null;
+let freqArray = null;
+let timeData = null;
+let rafId = null;
+let usingMic = false;
+let mediaStream = null;
+
+// shards precomputed
+let shards = []; // {x,y,w,h,cx,cy,ox,oy,rot}
+let shardCount = parseInt(shardCountControl.value);
+
+// canvas size adapt
+function resizeCanvas(){
+  const maxW = Math.min(1100, window.innerWidth - 80);
+  canvas.width = maxW;
+  canvas.height = Math.min(740, Math.round(window.innerHeight * 0.65));
+  if(image) fitImageToOffscreen();
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// load image
+imgInput.addEventListener('change', e=>{
+  const f = e.target.files[0];
+  if(!f) return;
+  const url = URL.createObjectURL(f);
+  const i = new Image();
+  i.crossOrigin = 'anonymous';
+  i.onload = ()=>{ image = i; fitImageToOffscreen(); prepareShards(); status.textContent = '图片已加载 / Image loaded'; URL.revokeObjectURL(url); }
+  i.src = url;
+});
+
+// audio file
+audioInput.addEventListener('change', async e=>{
+  const f = e.target.files[0];
+  if(!f) return;
+  usingMic = false;
+  stopMicIfNeeded();
+  const url = URL.createObjectURL(f);
+  audioEl.src = url;
+  audioEl.loop = true;
+  await audioEl.play().catch(()=>{});
+  initAudioProcessing();
+  status.textContent = `音频已加载: ${f.name}`;
+});
+
+// play / pause
+playBtn.addEventListener('click', async ()=>{
+  if(usingMic){ status.textContent='使用麦克风中 / Using microphone'; return; }
+  if(!audioEl.src){ status.textContent='请先上传音频或启用麦克风 / Upload audio or enable mic'; return; }
+  if(audioEl.paused){ await audioEl.play(); playBtn.textContent='暂停 / Pause'; initAudioProcessing(); status.textContent='播放中 / Playing'; }
+  else{ audioEl.pause(); playBtn.textContent='播放 / Play'; status.textContent='已暂停 / Paused'; }
+});
+
+// stop
+stopBtn.addEventListener('click', ()=>{
+  if(audioEl.src){ audioEl.pause(); audioEl.currentTime = 0; playBtn.textContent='播放 / Play'; }
+  stopMicIfNeeded();
+  tearDownAudio();
+  status.textContent = '已停止 / Stopped';
+});
+
+// mic
+micBtn.addEventListener('click', async ()=>{
+  if(usingMic){
+    stopMicIfNeeded();
+    status.textContent = '麦克风已停止 / Mic stopped';
+    return;
+  }
+  try {
+    mediaStream = await navigator.mediaDevices.getUserMedia({audio:true, video:false});
+    usingMic = true;
+    audioEl.srcObject = null;
+    initAudioProcessingFromStream(mediaStream);
+    status.textContent = '麦克风已启动 / Mic live';
+    micBtn.textContent = '停止麦克风 / Stop mic';
+  } catch(err){
+    console.error(err);
+    status.textContent = '无法访问麦克风: ' + err.message;
+  }
+});
+
+function stopMicIfNeeded(){
+  if(mediaStream){
+    mediaStream.getTracks().forEach(t=>t.stop());
+    mediaStream = null;
+  }
+  usingMic = false;
+  micBtn.textContent = '使用麦克风 / Microphone';
+}
+
+// audio context
+function initAudioProcessing(){
+  if(window.AudioContext == null && window.webkitAudioContext) window.AudioContext = window.webkitAudioContext;
+  if(!audioCtx) audioCtx = new AudioContext();
+  if(sourceNode){ try{ sourceNode.disconnect(); }catch(e){} }
+  sourceNode = audioCtx.createMediaElementSource(audioEl);
+  createAnalyser(sourceNode);
+}
+
+function initAudioProcessingFromStream(stream){
+  if(window.AudioContext == null && window.webkitAudioContext) window.AudioContext = window.webkitAudioContext;
+  if(!audioCtx) audioCtx = new AudioContext();
+  if(sourceNode){ try{ sourceNode.disconnect(); }catch(e){} }
+  sourceNode = audioCtx.createMediaStreamSource(stream);
+  createAnalyser(sourceNode);
+}
+
+function createAnalyser(source){
+  tearDownAudio();
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 2048;
+  const len = analyser.frequencyBinCount;
+  freqArray = new Uint8Array(len);
+  timeData = new Uint8Array(len);
+  source.connect(analyser);
+  analyser.connect(audioCtx.destination);
+  render();
+}
+
+function tearDownAudio(){
+  if(rafId) cancelAnimationFrame(rafId);
+  rafId = null;
+  analyser = null;
+  freqArray = null;
+  timeData = null;
+}
+
+// analyze helper
+function analyzeAudio(){
+  if(!analyser) return {avg:0,bass:0,freq:[]};
+  analyser.getByteTimeDomainData(timeData);
+  analyser.getByteFrequencyData(freqArray);
+  // rms from time domain
+  let sum=0;
+  for(let i=0;i<timeData.length;i++){ const v=(timeData[i]-128)/128; sum+=v*v; }
+  const rms = Math.sqrt(sum / timeData.length);
+  // low freq average (first 10% bins)
+  const lowBins = Math.max(3, Math.floor(freqArray.length*0.12));
+  let lowSum=0; for(let i=0;i<lowBins;i++) lowSum+=freqArray[i];
+  const lowAvg = lowSum / (lowBins*255);
+  return {avg:rms, bass:lowAvg, freq:freqArray};
+}
+
+// === image / offscreen setup ===
+let imgDrawW=400, imgDrawH=300, imgOffsetX=0, imgOffsetY=0;
+function fitImageToOffscreen(){
+  // make offscreen canvas equal to image natural size (or scaled down if huge)
+  const maxDim = 1600;
+  let iw = image.width, ih = image.height;
+  const scale = Math.min(1, maxDim / Math.max(iw,ih));
+  offImg.width = Math.round(iw * scale);
+  offImg.height = Math.round(ih * scale);
+  offCtx.clearRect(0,0,offImg.width,offImg.height);
+  offCtx.drawImage(image, 0, 0, offImg.width, offImg.height);
+  // determine how to place image on main canvas (fit with margins)
+  const maxW = canvas.width * 0.84;
+  const maxH = canvas.height * 0.84;
+  const fitScale = Math.min(maxW / offImg.width, maxH / offImg.height, 1);
+  imgDrawW = offImg.width * fitScale;
+  imgDrawH = offImg.height * fitScale;
+  imgOffsetX = (canvas.width - imgDrawW)/2;
+  imgOffsetY = (canvas.height - imgDrawH)/2;
+  prepareShards(); // recompute shards
+}
+
+// === shards (precompute rectangles) ===
+function prepareShards(){
+  shardCount = parseInt(shardCountControl.value);
+  shards = [];
+  if(!offImg.width || !offImg.height) return;
+  // create a grid then random-walk merge to produce varied shapes
+  const approx = Math.sqrt(shardCount);
+  const cols = Math.max(2, Math.round(approx * (offImg.width/offImg.height)));
+  const rows = Math.max(2, Math.round(shardCount / cols));
+  const wCell = Math.ceil(offImg.width/cols);
+  const hCell = Math.ceil(offImg.height/rows);
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      const x = c*wCell, y = r*hCell;
+      const w = Math.min(wCell, offImg.width - x);
+      const h = Math.min(hCell, offImg.height - y);
+      // central position in draw coords
+      const cx = x + w/2, cy = y + h/2;
+      shards.push({sx:x, sy:y, sw:w, sh:h, cx, cy, ox:0, oy:0, rot:0});
+    }
+  }
+  // if too many, randomly trim
+  while(shards.length > shardCount) shards.splice(Math.floor(Math.random()*shards.length),1);
+}
+
+// === main render loop ===
+function render(){
+  rafId = requestAnimationFrame(render);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  // backdrop
+  const bg = ctx.createLinearGradient(0,0,0,canvas.height);
+  bg.addColorStop(0,'rgba(4,9,19,0.75)'); bg.addColorStop(1,'rgba(2,4,8,0.9)');
+  ctx.fillStyle = bg; ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  // if no image: placeholder
+  if(!image){
+    ctx.save();
+    ctx.fillStyle = '#9fb0c6';
+    ctx.font = '18px system-ui, Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('请上传图片并上传音频或启用麦克风 → 图片随声音交互', canvas.width/2, canvas.height/2);
+    ctx.restore();
+    return;
+  }
+
+  // audio analysis
+  const a = analyzeAudio();
+  const sens = parseFloat(sensControl.value);
+  const bass = a.bass * sens;
+  const avg = a.avg * sens;
+  const freq = a.freq;
+
+  // choices
+  const doPixel = t_pixel.checked;
+  const doShard = t_shard.checked;
+  const doGlitch = t_glitch.checked;
+  const doAcid = t_acid.checked;
+  const doWarp = t_localwarp.checked;
+
+  // base draw source: either pixelated small canvas or offImg
+  // Pixelation: render offImg to tiny canvas then stretch up
+  const pixelSize = parseInt(pixelSizeControl.value); // bigger = coarser
+  if(doPixel){
+    // create tiny temp canvas
+    const pxCanvas = document.createElement('canvas');
+    const cols = Math.max(2, Math.floor(imgDrawW / pixelSize));
+    const rows = Math.max(2, Math.floor(imgDrawH / pixelSize));
+    pxCanvas.width = cols; pxCanvas.height = rows;
+    const pxCtx = pxCanvas.getContext('2d');
+    // draw scaled down
+    pxCtx.drawImage(offImg, 0, 0, offImg.width, offImg.height, 0,0, cols, rows);
+    // optionally jitter pixels by high-frequency
+    const hf = (freq && freq.length) ? (freq[Math.floor(freq.length*0.6)]/255) : 0;
+    // draw to main canvas stretched
+    ctx.imageSmoothingEnabled = false;
+    // center transform
+    ctx.save();
+    // small wobble & rotation from audio
+    const wobX = Math.sin(Date.now()*0.002)*3*avg;
+    const wobY = Math.cos(Date.now()*0.0025)*3*avg;
+    ctx.translate(imgOffsetX + wobX, imgOffsetY + wobY);
+    // subtle scale from bass
+    const pixelScale = 1 + bass*0.12;
+    ctx.scale(imgDrawW/cols * pixelScale / (imgDrawW/cols), imgDrawH/rows * pixelScale / (imgDrawH/rows));
+    // finally draw stretched
+    ctx.drawImage(pxCanvas, 0,0, cols, rows, 0,0, imgDrawW*pixelScale, imgDrawH*pixelScale);
+    ctx.restore();
+    ctx.imageSmoothingEnabled = true;
+  } else {
+    // default draw the offImg scaled into position
+    ctx.save();
+    const wobX = Math.sin(Date.now()*0.002)*4*avg;
+    const wobY = Math.cos(Date.now()*0.0025)*3*avg;
+    ctx.drawImage(offImg, 0,0, offImg.width, offImg.height, imgOffsetX + wobX, imgOffsetY + wobY, imgDrawW, imgDrawH);
+    ctx.restore();
+  }
+
+  // shards (碎片) — draw shards individually with offsets driven by low freq / avg
+  if(doShard && shards.length){
+    // draw each shard: sample from offImg and place with offsets
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    const bassMul = 1 + bass*6;
+    for(let i=0;i<shards.length;i++){
+      const s = shards[i];
+      // map shard source coords to draw coords
+      const sx = s.sx, sy = s.sy, sw = s.sw, sh = s.sh;
+      const relX = sx / offImg.width, relY = sy / offImg.height;
+      const dx = imgOffsetX + relX * imgDrawW;
+      const dy = imgOffsetY + relY * imgDrawH;
+      const dw = (sw / offImg.width) * imgDrawW;
+      const dh = (sh / offImg.height) * imgDrawH;
+      // compute offset influenced by sound & shard index
+      const freqIdx = Math.min(freq ? freq.length-1 : 0, Math.floor((i/shards.length) * (freq ? freq.length : 1)));
+      const fval = freq ? freq[freqIdx] / 255 : 0;
+      const amp = (0.5 + fval*1.4) * bassMul * 0.6;
+      // random seeded offsets for variety per shard
+      const rx = Math.sin(i*12.9898 + Date.now()*0.001) * (3 + i%7) * amp;
+      const ry = Math.cos(i*7.23 + Date.now()*0.0008) * (2 + (i%5)) * amp;
+      const rot = (Math.sin(i*3.3 + Date.now()*0.0009) * 0.04) * amp;
+      ctx.save();
+      ctx.translate(dx + dw/2 + rx, dy + dh/2 + ry);
+      ctx.rotate(rot);
+      ctx.drawImage(offImg, sx, sy, sw, sh, -dw/2, -dh/2, dw, dh);
+      ctx.restore();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.restore();
+  }
+
+  // glitch — horizontal slices copied with offsets + chroma split
+  if(doGlitch){
+    const glitchLevel = parseFloat(glitchStrControl.value); // 0..1
+    const slices = 6 + Math.round(glitchLevel * 18);
+    for(let i=0;i<slices;i++){
+      const h = Math.max(2, Math.floor((imgDrawH / slices) * (0.5 + Math.random())));
+      const sy = imgOffsetY + Math.floor(Math.random() * (imgDrawH - h));
+      // source relative
+      const srcYratio = (sy - imgOffsetY) / imgDrawH;
+      const srcY = Math.floor(srcYratio * offImg.height);
+      const srcH = Math.max(1, Math.round(h * (offImg.height / imgDrawH)));
+      const dx = Math.floor(imgOffsetX + (Math.random()*2 -1) * 30 * glitchLevel * (0.3 + a.avg));
+      // draw slice
+      ctx.save();
+      ctx.globalAlpha = 0.85;
+      // draw colored offsets for chromatic feel
+      // R channel
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.drawImage(offImg, 0, srcY, offImg.width, srcH, imgOffsetX + dx + 2, sy + 1, imgDrawW, h);
+      // G channel (slightly different)
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.drawImage(offImg, 0, srcY, offImg.width, srcH, imgOffsetX + dx - 2, sy - 1, imgDrawW, h);
+      // overlay original slice to keep some structure
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.drawImage(offImg, 0, srcY, offImg.width, srcH, imgOffsetX + dx*0.4, sy + 0, imgDrawW, h);
+      ctx.restore();
+    }
+  }
+
+  // local warp: create radial warp attractors (cheap approach: draw small displaced rectangles)
+  if(doWarp){
+    // pick few centers
+    const attractors = 3 + Math.round(bass*6);
+    for(let k=0;k<attractors;k++){
+      const t = Date.now()*0.0006 + k;
+      const cx = imgOffsetX + imgDrawW * (0.2 + 0.6 * ((k+1)/ (attractors+1)));
+      const cy = imgOffsetY + imgDrawH * (0.25 + 0.5 * ((k%2)*0.5));
+      const radius = 30 + bass*160;
+      // draw displaced tiny patches by sampling offImg and draw slightly moved
+      const patch = 10 + Math.round(6 + (k*7)%12 + Math.sin(t)*8);
+      ctx.save();
+      for(let y=-2;y<=2;y++){
+        for(let x=-2;x<=2;x++){
+          const px = cx + (x*patch*0.6) + Math.sin(t*(1+x))*bass*14;
+          const py = cy + (y*patch*0.6) + Math.cos(t*(1+y))*bass*12;
+          // source area in offImg mapping
+          const srcXratio = (px - imgOffsetX) / imgDrawW;
+          const srcYratio = (py - imgOffsetY) / imgDrawH;
+          const sx = Math.max(0, Math.floor(srcXratio * offImg.width));
+          const sy = Math.max(0, Math.floor(srcYratio * offImg.height));
+          const sw = Math.min(offImg.width - sx, Math.max(1, Math.floor(patch * (offImg.width/imgDrawW))));
+          const sh = Math.min(offImg.height - sy, Math.max(1, Math.floor(patch * (offImg.height/imgDrawH))));
+          if(sw>0 && sh>0){
+            ctx.globalAlpha = 0.85;
+            ctx.drawImage(offImg, sx, sy, sw, sh, px - patch/2, py - patch/2, patch, patch);
+          }
+        }
+      }
+      ctx.restore();
+    }
+  }
+
+  // acid color: RGB offset + neon radial glow driven by bass
+  if(doAcid){
+    const acidLevel = parseFloat(acidStrControl.value);
+    const hueShift = Math.min(1.6, 0.2 + bass * 2.4) * acidLevel;
+    // chromatic aberration: draw color channels offset
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    // R
+    ctx.globalAlpha = 0.14 * acidLevel + bass*0.3;
+    ctx.filter = `hue-rotate(${Math.floor(30*hueShift)}deg) saturate(${1+acidLevel*0.8})`;
+    ctx.drawImage(offImg, 0,0, offImg.width, offImg.height, imgOffsetX + hueShift*6, imgOffsetY + hueShift*2, imgDrawW, imgDrawH);
+    // G
+    ctx.globalAlpha = 0.12 * acidLevel + bass*0.25;
+    ctx.filter = `hue-rotate(${Math.floor(-40*hueShift)}deg) saturate(${1+acidLevel*0.6})`;
+    ctx.drawImage(offImg, 0,0, offImg.width, offImg.height, imgOffsetX - hueShift*5, imgOffsetY - hueShift*3, imgDrawW, imgDrawH);
+    // overlay soft radial glow
+    const cx = imgOffsetX + imgDrawW/2, cy = imgOffsetY + imgDrawH/2;
+    const glow = ctx.createRadialGradient(cx,cy, Math.max(imgDrawW,imgDrawH)*0.08, cx,cy, Math.max(imgDrawW,imgDrawH)*0.7 + bass*200);
+    glow.addColorStop(0, `rgba(${200 + Math.floor(55*bass)},${120 + Math.floor(80*bass)},${255 - Math.floor(120*bass)},${0.45*bass})`);
+    glow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.globalAlpha = 0.55 * Math.min(1, acidLevel);
+    ctx.fillStyle = glow;
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.filter = 'none';
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.restore();
+  }
+
+  // subtle vignette / final polish
+  ctx.save();
+  const vg = ctx.createRadialGradient(canvas.width/2, canvas.height/2, Math.max(canvas.width,canvas.height)*0.2, canvas.width/2, canvas.height/2, Math.max(canvas.width,canvas.height)*0.9);
+  vg.addColorStop(0, 'rgba(0,0,0,0)');
+  vg.addColorStop(1, 'rgba(0,0,0,0.35)');
+  ctx.fillStyle = vg;
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.restore();
+}
+
+// initial animation
+render();
+
+// recompute shards when shardCount slider changes
+shardCountControl.addEventListener('change', ()=>{ prepareShards(); });
+
+// cleanup
+window.addEventListener('beforeunload', ()=>{
+  stopMicIfNeeded();
+  if(audioCtx && audioCtx.state !== 'closed') try{ audioCtx.close(); }catch(e){}
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Future Fusion — 全视觉反应系统 (Cyber+Glitch+Crystal+Aurora)</title>
+<style>
+  body{margin:0;background:#05060a;color:#e6eef6;font-family:Inter,system-ui,Arial}
+  .ui{position:fixed;left:12px;top:12px;z-index:10;background:rgba(6,8,18,0.6);padding:12px;border-radius:10px;backdrop-filter: blur(6px);width:320px}
+  .ui h2{margin:0 0 8px 0;font-size:15px}
+  .row{display:flex;gap:8px;align-items:center;margin:6px 0}
+  .label{font-size:12px;color:#9fb0c6;min-width:82px}
+  input[type=range]{width:150px}
+  button, input[type=file]{background:#0b1320;color:#dff; border:none;padding:6px 8px;border-radius:8px;cursor:pointer}
+  .small{font-size:12px;color:#9fb0c6;margin-top:6px}
+</style>
+</head>
+<body>
+  <!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Photo + Sound Reactive Visuals</title>
+  <style>
+    html,body{height:100%;margin:0;background:#0a0a0c;color:#e6eef6;font-family:Inter, system-ui, Arial}
+    .topbar{position:fixed;left:12px;top:12px;z-index:20;background:rgba(10,12,18,0.7);padding:10px;border-radius:10px;backdrop-filter:blur(6px);display:flex;gap:8px;align-items:center}
+    .topbar input[type=file]{display:none}
+    .btn{background:#0f1724;color:#dff;border:none;padding:8px 10px;border-radius:8px;cursor:pointer}
+    .label{font-size:13px;color:#9fb0c6;margin-right:6px}
+    .note{position:fixed;left:12px;bottom:12px;color:#9fb0c6;font-size:13px}
+    canvas{display:block}
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <label class="label">Image</label>
+    <label class="btn" id="uploadBtn">Upload Image
+      <input id="imgInput" type="file" accept="image/*">
+    </label>
+
+    <label class="label">Audio</label>
+    <button class="btn" id="micBtn">Use Microphone</button>
+    <label class="btn" id="audioUploadBtn">Upload Audio
+      <input id="audioInput" type="file" accept="audio/*">
+    </label>
+
+    <label class="label">Sensitivity</label>
+    <input id="sens" type="range" min="0.2" max="3" step="0.01" value="1" style="width:140px">
+  </div>
+
+  <div class="note">Tip: Upload an image, then allow mic or upload audio. Resize the window to adapt.</div>
+
+  <!-- p5.js and p5.sound -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
+
+  <script>
+  // Photo + Sound Reactive Visuals
+  // Features:
+  // - Upload photo
+  // - Use microphone or upload audio file
+  // - Volume-driven scale (shrink/expand)
+  // - Bass-driven block pixel distortion + chromatic shift
+  // - Treble-driven wave twist / warp
+  // - Glitch lines and occasional slice bursts
+  // - Acidic hue rotation overlay
+
+  let img;
+  let uploaded = false;
+  let mic, fft;
+  let gfx; // offscreen buffer
+  let audioFile = null;
+  let usingMic = false;
+
+  function setup() {
+    createCanvas(windowWidth, windowHeight);
+    pixelDensity(1);
+    gfx = createGraphics(windowWidth, windowHeight);
+
+    // audio input
+    mic = new p5.AudioIn();
+    fft = new p5.FFT(0.8, 1024);
+    fft.setInput(mic);
+
+    // UI hooks
+    const imgInput = document.getElementById('imgInput');
+    imgInput.addEventListener('change', handleImageFile);
+
+    const audioInput = document.getElementById('audioInput');
+    audioInput.addEventListener('change', handleAudioFile);
+
+    const micBtn = document.getElementById('micBtn');
+    micBtn.addEventListener('click', async () => {
+      try {
+        await getAudioContext().resume();
+        if (!usingMic) {
+          mic.start();
+          fft.setInput(mic);
+          usingMic = true;
+          micBtn.textContent = 'Stop Microphone';
+        } else {
+          mic.stop();
+          usingMic = false;
+          micBtn.textContent = 'Use Microphone';
+        }
+      } catch (err) {
+        alert('Microphone access error: ' + err.message);
+      }
+    });
+
+    // file upload button label fix (so clicking the label opens the file selector)
+    document.getElementById('uploadBtn').addEventListener('click', ()=> imgInput.click());
+    document.getElementById('audioUploadBtn').addEventListener('click', ()=> audioInput.click());
+  }
+
+  function handleImageFile(e) {
+    const f = e.target.files[0];
+    if (!f) return;
+    const url = URL.createObjectURL(f);
+    loadImage(url, loaded => {
+      img = loaded;
+      uploaded = true;
+      URL.revokeObjectURL(url);
+    });
+  }
+
+  function handleAudioFile(e) {
+    const f = e.target.files[0];
+    if (!f) return;
+    // stop mic if running
+    if (usingMic) { mic.stop(); usingMic = false; document.getElementById('micBtn').textContent = 'Use Microphone'; }
+    if (audioFile) { audioFile.disconnect(); audioFile.stop && audioFile.stop(); audioFile = null; }
+    const url = URL.createObjectURL(f);
+    loadSound(url, s => {
+      audioFile = s;
+      s.loop();
+      fft.setInput(s);
+      URL.revokeObjectURL(url);
+    }, err => { console.error('loadSound error', err); });
+  }
+
+  function draw() {
+    background(6,8,12);
+
+    if (!uploaded) {
+      noStroke();
+      fill(220);
+      textSize(20);
+      text('Upload an image to begin...', 40, 80);
+      return;
+    }
+
+    // analyze audio
+    let spectrum = fft.analyze();
+    let bass = fft.getEnergy('bass');     // 0..255
+    let mid = fft.getEnergy('mid');       // 0..255
+    let treble = fft.getEnergy('treble'); // 0..255
+    let vol = mic.getLevel();             // ~0..0.3 (varies)
+    if (audioFile) {
+      // if using an audio file, mic.getLevel might be near 0; derive overall energy from spectrum
+      const sum = spectrum.reduce((a,b)=>a+b,0);
+      const avg = sum / spectrum.length / 255.0;
+      vol = max(vol, avg * 0.6);
+    }
+
+    const sens = parseFloat(document.getElementById('sens').value);
+
+    // draw into offscreen gfx
+    gfx.push();
+    gfx.clear();
+
+    // base scale transform driven by volume (shrink/expand)
+    let scaleAmt = 1 + vol * 3 * sens;
+    gfx.push();
+    gfx.translate(width / 2, height / 2);
+    gfx.scale(scaleAmt);
+    gfx.imageMode(CENTER);
+
+    // maintain image aspect ratio and fit within canvas while preserving original proportion
+    let iw = img.width, ih = img.height;
+    let maxW = width * 0.9, maxH = height * 0.9;
+    let fitScale = min(maxW / iw, maxH / ih, 1);
+    let drawW = iw * fitScale;
+    let drawH = ih * fitScale;
+
+    gfx.image(img, 0, 0, drawW, drawH);
+    gfx.pop();
+
+    // 1) Pixel block distortion (bass-driven)
+    let blockSize = floor(map(bass, 0, 255, 10, 80) * (1.0 - 0.25*mid/255) ); // mid reduces block size slightly
+    blockSize = constrain(blockSize, 6, 120);
+    // copy blocks around inside gfx
+    for (let y = 0; y < height; y += blockSize) {
+      for (let x = 0; x < width; x += blockSize) {
+        // small offset depending on bass
+        let offX = floor(map(bass, 0, 255, -20, 20) * (0.6 + vol*2.0) * sens);
+        gfx.copy(gfx, x, y, blockSize, blockSize, x + offX, y, blockSize, blockSize);
+      }
+    }
+
+    // 2) Wave distortion (treble-driven)
+    let waveAmp = map(treble, 0, 255, 0, 50) * (0.6 + vol*2.0) * sens;
+    let waveFreq = map(vol, 0, 0.3, 0.004, 0.12);
+    gfx.loadPixels();
+    for (let y = 0; y < height; y++) {
+      let shift = Math.sin(frameCount * 0.015 + y * waveFreq) * waveAmp;
+      // shift each row to the right
+      for (let x = width - 1; x > 0; x--) {
+        let i = (y * width + x) * 4;
+        let srcX = floor(constrain(x - shift, 0, width - 1));
+        let i2 = (y * width + srcX) * 4;
+        gfx.pixels[i] = gfx.pixels[i2];
+        gfx.pixels[i + 1] = gfx.pixels[i2 + 1];
+        gfx.pixels[i + 2] = gfx.pixels[i2 + 2];
+        gfx.pixels[i + 3] = gfx.pixels[i2 + 3];
+      }
+    }
+    gfx.updatePixels();
+
+    // 4) Glitch lines and occasional bursts (bass + volume triggered)
+    if (frameCount % 6 === 0 && (vol > 0.02 || bass > 100)) {
+      let y1 = floor(random(height));
+      let h = floor(random(6, 36));
+      gfx.copy(gfx, 0, y1, width, h, floor(random(-30, 30)), y1, width, h);
+    }
+
+    // 4b) Chromatic shift overlay (additive)
+    let shiftAmt = map(bass, 0, 255, 0, 12) * (0.6 + vol * 2.0) * sens;
+    // draw red shifted
+    blendMode(ADD);
+    tint(255, 0, 0, 120);
+    image(gfx, shiftAmt, 0);
+    // draw cyan shifted
+    tint(0, 255, 255, 120);
+    image(gfx, -shiftAmt, 0);
+    // restore
+    blendMode(BLEND);
+    tint(255);
+
+    // draw current gfx as base
+    image(gfx, 0, 0);
+
+    // 5) Acidic color rotation overlay (subtle)
+    push();
+    // use canvas 2D context filter for hue-rotate effect if supported
+    // build a subtle rotation influenced by frameCount and bass
+    let hueShift = (frameCount * 0.25 + bass * 0.8) % 360;
+    // apply CSS filter on drawingContext (works in many browsers)
+    try {
+      drawingContext.filter = `hue-rotate(${hueShift}deg) saturate(${1 + vol * 2.0})`;
+      image(gfx, 0, 0);
+      drawingContext.filter = 'none';
+    } catch (err) {
+      // fallback: no filter available
+    }
+    pop();
+
+    gfx.pop();
+
+    // Final lightweight vignette/glow
+    noFill();
+    push();
+    translate(width / 2, height / 2);
+    let maxDim = max(width, height);
+    noStroke();
+    // soft overlay by drawing radial gradient via ellipse with low alpha
+    blendMode(SCREEN);
+    fill(24, 40, 120, 30 + bass * 0.3);
+    ellipse(0, 0, maxDim * (1.0 + vol * 0.6));
+    blendMode(BLEND);
+    pop();
+
+    // optional debug text (energies)
+    noStroke();
+    fill(255, 255, 255, 180);
+    textSize(12);
+    text(`Bass: ${nf(bass,1,2)}  Mid: ${nf(mid,1,2)}  Treble: ${nf(treble,1,2)}  Vol: ${nf(vol,1,3)}`, 12, height - 12);
+  }
+
+  function windowResized() {
+    resizeCanvas(windowWidth, windowHeight);
+    gfx = createGraphics(windowWidth, windowHeight);
+  }
+  </script>
+</body>
+</html>
+
+ 
+</script>
+</body>
+</html>

@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Future Fusion — 全视觉反应系统 (Cyber+Glitch+Crystal+Aurora)</title>
+<style>
+  body{margin:0;background:#05060a;color:#e6eef6;font-family:Inter,system-ui,Arial}
+  .ui{position:fixed;left:12px;top:12px;z-index:10;background:rgba(6,8,18,0.6);padding:12px;border-radius:10px;backdrop-filter: blur(6px);width:320px}
+  .ui h2{margin:0 0 8px 0;font-size:15px}
+  .row{display:flex;gap:8px;align-items:center;margin:6px 0}
+  .label{font-size:12px;color:#9fb0c6;min-width:82px}
+  input[type=range]{width:150px}
+  button, input[type=file]{background:#0b1320;color:#dff; border:none;padding:6px 8px;border-radius:8px;cursor:pointer}
+  .small{font-size:12px;color:#9fb0c6;margin-top:6px}
+</style>
+</head>
+<body>
+  <div class="ui">
+    <h2>Future Fusion — 全视觉反应 / Fusion (中英)</h2>
+
+    <div class="row"><div class="label">图片 / Image</div><input id="imgFile" type="file" accept="image/*"></div>
+    <div class="row"><div class="label">音频 / Mic</div><button id="micBtn">启用麦克风 / Use Mic</button><button id="audioFileBtn">上传音频</button><input id="audioFile" type="file" accept="audio/*" style="display:none"></div>
+
+    <div class="row"><div class="label">灵敏度 / Sens</div><input id="sens" type="range" min="0.2" max="3" step="0.01" value="1"></div>
+    <div class="row"><div class="label">酸性 / Acid</div><input id="u_acid" type="range" min="0" max="2" step="0.01" value="1"></div>
+    <div class="row"><div class="label">故障 / Glitch</div><input id="u_glitch" type="range" min="0" max="1" step="0.01" value="0.5"></div>
+    <div class="row"><div class="label">折射 / Crystal</div><input id="u_crystal" type="range" min="0" max="1.5" step="0.01" value="0.8"></div>
+    <div class="row"><div class="label">液化 / Liquid</div><input id="u_liquid" type="range" min="0" max="1.5" step="0.01" value="0.9"></div>
+
+    <div class="row"><div class="label">像素化 / Pixel</div><input id="u_pixel" type="range" min="1" max="60" step="1" value="12"></div>
+
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button id="presetDream">Preset: Dreamy</button>
+      <button id="presetHard">Preset: Hard</button>
+    </div>
+
+    <div class="small">提示：播放音乐或直接对麦克风讲话，试试不同滑杆调出你喜欢的组合。<br/>Tip: Speak or play music into mic; tweak sliders.</div>
+  </div>
+
+  <!-- p5 + p5.sound -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
+
+<script id="vert" type="x-shader/x-vertex">
+  attribute vec3 aPosition;
+  attribute vec2 aTexCoord;
+  varying vec2 vTex;
+  void main() {
+    vTex = aTexCoord;
+    gl_Position = vec4(aPosition, 1.0);
+  }
+</script>
+
+<script id="frag" type="x-shader/x-fragment">
+  precision highp float;
+  varying vec2 vTex;
+  uniform sampler2D u_tex;
+  uniform vec2 u_res;
+  uniform float u_time;
+  uniform float u_bass;
+  uniform float u_mid;
+  uniform float u_treble;
+  uniform float u_sens;
+
+  // effect strengths
+  uniform float u_acid;
+  uniform float u_glitch;
+  uniform float u_crystal;
+  uniform float u_liquid;
+  uniform float u_pixel;
+  uniform float u_dreamy; // 0..1 dreamy softness
+
+  //
+  // utility noise / hash
+  //
+  float hash(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453123); }
+  float noise(vec2 p){
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    float a = hash(i), b = hash(i + vec2(1.0,0.0));
+    float c = hash(i + vec2(0.0,1.0)), d = hash(i + vec2(1.0,1.0));
+    vec2 u = f*f*(3.0-2.0*f);
+    return mix(a,b,u.x) + (c-a)*u.y*(1.0-u.x) + (d-b)*u.x*u.y;
+  }
+
+  // rgb shift sampling
+  vec3 sampleShift(vec2 uv, float shift){
+    vec2 offR = vec2(shift*0.003, -shift*0.002);
+    vec2 offG = vec2(-shift*0.002, shift*0.0025);
+    vec2 offB = vec2(shift*0.0015, shift*0.003);
+    float r = texture2D(u_tex, uv + offR).r;
+    float g = texture2D(u_tex, uv + offG).g;
+    float b = texture2D(u_tex, uv + offB).b;
+    return vec3(r,g,b);
+  }
+
+  // polar warp (liquid)
+  vec2 polarWarp(vec2 uv, float t, float amount){
+    vec2 p = uv - 0.5;
+    float r = length(p);
+    float a = atan(p.y, p.x);
+    float wob = sin(a*6.0 + t*0.8 + r*20.0) * 0.02 * amount;
+    r += wob * (0.6 + 0.6*amount);
+    return vec2(cos(a)*r, sin(a)*r) + 0.5;
+  }
+
+  // crystal refraction: offset uv by small noise-based normal
+  vec2 crystal(vec2 uv, float t, float strength){
+    // sample slightly perturbed normal from noise
+    float n = noise(uv*vec2(6.0,6.0) + t*0.25);
+    float n2 = noise(uv*vec2(12.0,12.0) - t*0.4);
+    vec2 grad = vec2(n - n2, n2 - n) * 0.6;
+    return uv + grad * 0.02 * strength;
+  }
+
+  // glitch slices (horizontal) - returns offset uv for slice effect
+  vec2 glitchSlices(vec2 uv, float t, float intensity){
+    float y = uv.y;
+    float slices = mix(3.0, 48.0, intensity);
+    float id = floor(y * slices);
+    float rnd = hash(vec2(id, floor(t*5.0)));
+    float shift = (rnd - 0.5) * 0.06 * intensity * (0.6 + u_bass*2.5);
+    // occasionally bigger burst
+    float burst = step(0.9, fract(sin(id*12.9898 + t*7.0)*43758.5)) * u_bass * 0.12 * intensity;
+    shift += burst;
+    return uv + vec2(shift, 0.0);
+  }
+
+  // pixelate
+  vec2 pixelate(vec2 uv, float px){
+    if(px <= 1.5) return uv;
+    vec2 res = u_res;
+    vec2 p = floor(uv * res / px) * px / res + (px*0.5)/res;
+    return p;
+  }
+
+  void main(){
+    vec2 uv = vTex;
+    vec2 nor = uv;
+
+    // apply liquid / twist driven by treble
+    float tre = clamp(u_treble * 1.2, 0.0, 1.5);
+    float mid = clamp(u_mid * 1.0, 0.0, 1.2);
+    float bas = clamp(u_bass * 1.6, 0.0, 1.5);
+
+    // subtle overall time modulation
+    float t = u_time * 0.8;
+
+    // Dreamy soft tech: add gentle global blur-like offset via noise
+    vec2 dreamyOffset = vec2(noise(nor*8.0 + t*0.2), noise(nor*12.0 - t*0.15)) - 0.5;
+    dreamyOffset *= 0.002 * u_dreamy;
+
+    // 1) Pixelation mainly by mid
+    float px = mix(1.0, u_pixel, mid * 1.0);
+
+    // 2) liquid warp (polar) + crystal refraction + dreamy offset
+    vec2 uv_liq = polarWarp(nor + dreamyOffset, t, u_liquid * tre);
+    uv_liq = crystal(uv_liq, t, u_crystal * tre);
+
+    // 3) glitch slices applied on top, influenced by bass & glitch slider
+    vec2 uv_gl = glitchSlices(uv_liq, t, u_glitch * bas);
+
+    // 4) pixelation sampling coordinate
+    vec2 uv_px = pixelate(uv_gl, px);
+
+    // 5) sample with acid rgb shift
+    float acidFactor = u_acid * (0.5 + bas*1.8);
+    vec3 col = sampleShift(uv_px, acidFactor);
+
+    // 6) aurora: additive soft colorful bands influenced by bass & dreamy
+    float band = sin((uv.y*6.0 + t*0.6 + bas*6.0)) * 0.5 + 0.5;
+    vec3 aurora = vec3(0.2,0.5,1.0) * smoothstep(0.3,0.7,band) * (0.6 * u_dreamy + bas*0.8);
+    // aurora pastel mapping (mix cyan/pink/light)
+    aurora = mix(aurora, vec3(1.0,0.5,0.8)*0.7, 0.45 * u_acid);
+
+    // 7) add small grain / noise for texture
+    float grain = (hash(uv*vec2(512.0,512.0)) - 0.5) * 0.03 * (0.8 + u_dreamy);
+    col += aurora;
+    col += grain;
+
+    // 8) final soft tone mapping + dreamy glow: slightly desaturate then boost brightness
+    float lum = dot(col, vec3(0.299,0.587,0.114));
+    vec3 desat = mix(vec3(lum), col, 0.9);
+    vec3 finalColor = desat * (1.0 + u_dreamy*0.18) + vec3(bas*0.18, mid*0.06, tre*0.06);
+
+    // clamp & gamma
+    finalColor = clamp(finalColor, 0.0, 1.0);
+    finalColor = pow(finalColor, vec3(0.95)); // slight gamma
+
+    gl_FragColor = vec4(finalColor, 1.0);
+  }
+</script>
+
+<script>
+let theShader;
+let imgTex = null;
+let mic, fft, audioFile;
+let usingMic = false;
+let cnv;
+let shaderReady = false;
+
+function preload(){
+  // load shader source from script tags
+  const vert = document.getElementById('vert').textContent;
+  const frag = document.getElementById('frag').textContent;
+  theShader = new p5.Shader(this._renderer, vert, frag);
+}
+
+function setup(){
+  cnv = createCanvas(windowWidth, windowHeight, WEBGL);
+  noStroke();
+
+  // audio
+  fft = new p5.FFT(0.8, 1024);
+  mic = new p5.AudioIn();
+
+  // UI hookup
+  document.getElementById('imgFile').addEventListener('change', e=>{
+    const f = e.target.files[0];
+    if(!f) return;
+    const url = URL.createObjectURL(f);
+    loadImage(url, im=>{
+      imgTex = im;
+      URL.revokeObjectURL(url);
+    });
+  });
+
+  document.getElementById('micBtn').addEventListener('click', async ()=>{
+    if(!usingMic){
+      try{
+        await getAudioContext().resume();
+        mic.start();
+        fft.setInput(mic);
+        usingMic = true;
+        document.getElementById('micBtn').textContent = '停止麦克风 / Stop Mic';
+      }catch(err){
+        alert('麦克风权限或音频上下文问题: ' + err.message);
+      }
+    } else {
+      mic.stop();
+      usingMic = false;
+      document.getElementById('micBtn').textContent = '启用麦克风 / Use Mic';
+    }
+  });
+
+  document.getElementById('audioFileBtn').addEventListener('click', ()=> document.getElementById('audioFile').click());
+  document.getElementById('audioFile').addEventListener('change', e=>{
+    const f = e.target.files[0];
+    if(!f) return;
+    if(audioFile) { audioFile.stop(); audioFile.disconnect(); }
+    const url = URL.createObjectURL(f);
+    audioFile = loadSound(url, s=>{
+      s.loop();
+      fft.setInput(s);
+      usingMic = false;
+      document.getElementById('micBtn').textContent = '启用麦克风 / Use Mic';
+      URL.revokeObjectURL(url);
+    });
+  });
+
+  // presets
+  document.getElementById('presetDream').addEventListener('click', ()=>{
+    document.getElementById('u_acid').value = 0.9;
+    document.getElementById('u_glitch').value = 0.4;
+    document.getElementById('u_crystal').value = 0.9;
+    document.getElementById('u_liquid').value = 1.0;
+    document.getElementById('u_pixel').value = 10;
+    document.getElementById('sens').value = 1.0;
+  });
+  document.getElementById('presetHard').addEventListener('click', ()=>{
+    document.getElementById('u_acid').value = 1.6;
+    document.getElementById('u_glitch').value = 0.9;
+    document.getElementById('u_crystal').value = 1.2;
+    document.getElementById('u_liquid').value = 0.4;
+    document.getElementById('u_pixel').value = 3;
+    document.getElementById('sens').value = 1.6;
+  });
+
+  shaderReady = true;
+}
+
+function draw(){
+  if(!shaderReady) return;
+
+  background(10);
+
+  // get energies
+  let bass = constrain(fft.getEnergy("bass") / 255.0, 0, 1);
+  let mid = constrain(fft.getEnergy("mid") / 255.0, 0, 1);
+  let treble = constrain(fft.getEnergy("treble") / 255.0, 0, 1);
+  const sens = parseFloat(document.getElementById('sens').value);
+
+  // map/scale a little
+  bass = pow(bass, 0.9) * sens;
+  mid = pow(mid, 1.0) * sens;
+  treble = pow(treble, 1.1) * sens;
+
+  // set shader and uniforms
+  shader(theShader);
+  theShader.setUniform('u_time', millis() / 1000.0);
+  theShader.setUniform('u_res', [width, height]);
+  theShader.setUniform('u_bass', bass);
+  theShader.setUniform('u_mid', mid);
+  theShader.setUniform('u_treble', treble);
+  theShader.setUniform('u_sens', sens);
+
+  // effect uniforms from UI
+  theShader.setUniform('u_acid', parseFloat(document.getElementById('u_acid').value));
+  theShader.setUniform('u_glitch', parseFloat(document.getElementById('u_glitch').value));
+  theShader.setUniform('u_crystal', parseFloat(document.getElementById('u_crystal').value));
+  theShader.setUniform('u_liquid', parseFloat(document.getElementById('u_liquid').value));
+  theShader.setUniform('u_pixel', parseFloat(document.getElementById('u_pixel').value));
+  theShader.setUniform('u_dreamy', 0.95); // fixed dreamy softness for style B
+
+  // bind texture (image) or a default fallback
+  if(imgTex){
+    theShader.setUniform('u_tex', imgTex);
+    // draw rectangle covering canvas (in WEBGL coordinates  -1..1)
+    rect(-width/2, -height/2, width, height);
+  } else {
+    // render a placeholder gradient texture (fallback)
+    // create small procedural texture on CPU for fallback
+    push();
+    // draw gradient into p5 canvas then pass -- easier to just bind a tiny default
+    // but p5 shader expects sampler2D; using default p5 texture (0) can be tricky; instead create a small graphics
+    let g = createGraphics(256,256);
+    g.noStroke();
+    for(let i=0;i<256;i++){
+      g.fill(12 + i*0.2, 18 + i*0.12, 40 + i*0.08);
+      g.rect(0,i,256,1);
+    }
+    theShader.setUniform('u_tex', g);
+    rect(-width/2, -height/2, width, height);
+    pop();
+  }
+
+  // Debug overlay (optional): display energies
+  // reset to default shaders
+  resetShader();
+  push();
+  translate(-width/2, -height/2);
+  noStroke();
+  fill(255,255,255,160);
+  textSize(12);
+  text('Bass: ' + nf(bass,1,2) + '  Mid: ' + nf(mid,1,2) + '  Treb: ' + nf(treble,1,2), 12, 18);
+  pop();
+}
+
+function windowResized(){
+  resizeCanvas(windowWidth, windowHeight);
+}
+</script>
+</body>
+</html>
