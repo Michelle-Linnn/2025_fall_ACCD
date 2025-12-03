@@ -29,7 +29,7 @@ function gotHands(results) {
 function draw() {
   image(video, 0, 0, width, height);
 
-  // 画已记录的轨迹
+  // 绘制已记录路线
   stroke(0);
   strokeWeight(4);
   noFill();
@@ -39,22 +39,23 @@ function draw() {
   }
   endShape();
 
+  // 如果检测到手
   if (hands.length > 0) {
-    let hand = hands[0]; // 只用第一只手
+    let hand = hands[0];
 
-    // 找到食指指尖（新版用 name 判断）
+    // 找到食指指尖
     let indexTip = hand.keypoints.find(k => k.name === "index_finger_tip");
 
     if (indexTip) {
       let x = indexTip.x;
       let y = indexTip.y;
 
-      // 显示红点
+      // 红点显示
       fill(255, 0, 0);
       noStroke();
       circle(x, y, 15);
 
-      // 添加到线条
+      // 添加到画笔轨迹
       drawing.push({ x, y });
     }
   }
