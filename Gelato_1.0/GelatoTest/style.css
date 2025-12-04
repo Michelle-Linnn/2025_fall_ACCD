@@ -1,0 +1,14 @@
+html, body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden; /* 防止滚动条出现 */
+    display: flex;
+    justify-content: center; /* 让画布居中 */
+    align-items: center;
+    height: 100vh;
+    background-color: #f0f0f0; /* 背景颜色 */
+}
+canvas {
+    display: block;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* 给画布加个阴影 */
+}

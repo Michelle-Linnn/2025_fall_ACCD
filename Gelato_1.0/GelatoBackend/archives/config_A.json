@@ -1,0 +1,28 @@
+{
+  "archiveName": "CONFIG A",
+  "flavorList": [
+    { "id": "V", "name": "Vanilla" },
+    { "id": "P", "name": "Pistachio" },
+    { "id": "S", "name": "Strawberry" },
+    { "id": "C", "name": "Chocolate" }
+    
+  ],
+  "abstractList": [
+    {
+      "id": "A1",
+      "name": "深蓝色漩涡",
+      "url": "",
+      "weights": { "V": 90, "P": 10, "S": 5, "C": 20 }
+    }
+    
+  ],
+  "moodList": [
+    {
+      "id": "M1",
+      "name": "开心小人",
+      "url": "",
+      "weights": { "V": 20, "P": 5, "S": 80, "C": 10 }
+    }
+    
+  ]
+}
