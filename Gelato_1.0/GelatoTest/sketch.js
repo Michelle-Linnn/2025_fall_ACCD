@@ -2,7 +2,8 @@
 // ** 核心概念：页面导航 (currentPage) & 数据结构**
 // ===================================
 
-// 定义所有页面名称
+const BACKEND_URL = 'http://localhost:3000';
+
 const PAGES = {
     COVER: '封面页',
     FLAVOR_SELECT: '口味选择页',
@@ -12,96 +13,116 @@ const PAGES = {
     REPORT: '测试报告'
 };
 
-// 变量：当前用户在哪个页面
 let currentPage = PAGES.COVER; 
-
 let canvasWidth = 800;
 let canvasHeight = 600;
 
-// 数据结构
-const FLAVOR_COUNT = 24;
-let flavors = []; 
-
-const ABSTRACT_IMAGE_COUNT = 12; 
-let abstractImages = [];
-
-const MOOD_IMAGE_COUNT = 12; 
-let moodImages = [];
+// *** 动态数据结构 ***
+let flavorList = [];        // 存储从后端加载的口味列表
+let abstractList = [];      // 存储从后端加载的抽象图片列表
+let moodList = [];          // 存储从后端加载的心情小人列表
 
 // 动画和报告相关
 let selectedItems = []; 
 let animationStartTime;
 const ANIMATION_DURATION = 4000; // 4000毫秒 = 4秒
 
+// 图片加载占位符 (p5.js image 对象)
+let loadedImages = {}; 
+let assetsLoaded = false; // 标记数据和图片是否加载完成
+
+// ===================================
+// ** 数据加载和预加载函数 **
+// ===================================
+
+// p5.js 函数：在 setup 之前执行，用于加载外部资源
+function preload() {
+    loadBackendConfig();
+}
+
+// 异步加载后端配置和图片
+// 辅助函数：从 URL 获取参数
+function getURLParam(name) {
+    // window.location.search 包含了 ?config=B 这样的部分
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get(name);
+}
+
+// 异步加载后端配置和图片
+async function loadBackendConfig() {
+    // **核心修改：动态获取存档名称，默认为 'A'**
+    const archiveName = getURLParam('config') || 'A'; 
+
+    console.log(`正在从后端加载 Config ${archiveName} ...`);
+    try {
+        // 使用动态获取的 archiveName
+        const response = await fetch(`${BACKEND_URL}/api/config/${archiveName}`);
+        if (!response.ok) {
+            throw new Error(`无法加载 Config ${archiveName}。`);
+        }
+        const data = await response.json();
+        
+        // 1. 更新前端数据结构
+        flavorList = data.flavorList ? data.flavorList.map(f => ({ ...f, isSelected: false })) : [];
+        abstractList = data.abstractList ? data.abstractList.map(a => ({ ...a, isSelected: false })) : [];
+        moodList = data.moodList ? data.moodList.map(m => ({ ...m, isSelected: false })) : [];
+
+        console.log(`成功加载 ${flavorList.length} 种口味, ${abstractList.length} 张抽象图, ${moodList.length} 个心情小人.`);
+        
+        // 2. 异步加载图片
+        const allItems = [...flavorList, ...abstractList, ...moodList];
+        const imagePromises = allItems
+            .filter(item => item.url)
+            .map(item => {
+                return new Promise(resolve => {
+                    loadImage(BACKEND_URL + item.url, (img) => {
+                        loadedImages[item.id] = img;
+                        resolve();
+                    }, (err) => {
+                        console.error(`加载图片失败: ${item.url}`, err);
+                        loadedImages[item.id] = null; 
+                        resolve(); 
+                    });
+                });
+            });
+            
+        await Promise.all(imagePromises);
+        assetsLoaded = true;
+        console.log("所有资源加载完成，可以开始测试！");
+
+    } catch (error) {
+        console.error("加载后端配置失败:", error);
+        alert("错误：无法连接到后台服务器或加载配置。请确保 Node.js 服务器已启动在 3000 端口。");
+    }
+}
+
+
 // ===================================
 // ** 初始化函数 **
 // ===================================
 
-function initializeFlavors() {
-    for (let i = 1; i <= FLAVOR_COUNT; i++) {
-        flavors.push({
-            id: i,
-            name: `口味 ${i}`, 
-            isSelected: false 
-        });
-    }
-}
-
-function initializeAbstractImages() {
-    // 随机颜色作为抽象图片的占位
-    const colors = [
-        color(255, 0, 0), color(0, 0, 255), color(0, 255, 0), 
-        color(255, 255, 0), color(255, 0, 255), color(0, 255, 255),
-        color(100), color(200), color(150, 50, 200), color(250, 150, 0),
-        color(50, 100, 150), color(150, 50, 50)
-    ];
-
-    for (let i = 0; i < ABSTRACT_IMAGE_COUNT; i++) {
-        abstractImages.push({
-            id: `A${i + 1}`,
-            placeholderColor: colors[i % colors.length],
-            isSelected: false 
-        });
-    }
-}
-
-function initializeMoodImages() {
-    // 随机颜色作为心情小人的占位
-    const moodColors = [
-        color(255, 165, 0), color(135, 206, 250), color(255, 105, 180), 
-        color(60, 179, 113), color(218, 165, 32), color(147, 112, 219),
-        color(240, 128, 128), color(128, 0, 0), color(0, 128, 128), color(0, 0, 128),
-        color(128, 128, 0), color(0, 128, 0)
-    ];
-    
-    for (let i = 0; i < MOOD_IMAGE_COUNT; i++) {
-        moodImages.push({
-            id: `M${i + 1}`,
-            placeholderColor: moodColors[i % moodColors.length],
-            isSelected: false 
-        });
-    }
-}
-
-// p5.js setup 函数：只执行一次
 function setup() {
     createCanvas(canvasWidth, canvasHeight);
     textAlign(CENTER, CENTER);
-    
-    initializeFlavors();
-    initializeAbstractImages();
-    initializeMoodImages(); 
-    console.log("程序初始化完成，当前页面：", currentPage);
 }
+
 
 // ===================================
 // ** 绘制函数：主循环 **
 // ===================================
 
-// p5.js draw 函数：循环执行
 function draw() {
     background(255); 
 
+    if (!assetsLoaded) {
+        // 正在加载中的画面
+        fill(50);
+        textSize(30);
+        text('正在加载配置和图片...', width / 2, height / 2);
+        return;
+    }
+
+    // 根据当前页面变量，绘制对应的画面
     if (currentPage === PAGES.COVER) {
         drawCoverPage();
     } else if (currentPage === PAGES.FLAVOR_SELECT) {
@@ -137,7 +158,8 @@ function drawBackButton() {
     text('返回', 70, height - 45);
 }
 
-// P1 绘制
+
+// P1 绘制 (封面页)
 function drawCoverPage() {
     fill(50);
     textSize(30);
@@ -151,9 +173,45 @@ function drawCoverPage() {
     fill(255);
     textSize(28);
     text('开始测试', width / 2, height / 2 + 50);
+
+    // --- 新增：存档切换按钮 ---
+    const btnY = height - 50;
+    const btnW = 80;
+    const btnH = 30;
+    const spacing = 10;
+    
+    // 按钮位置计算 (居中排列)
+    const totalWidth = 3 * btnW + 2 * spacing;
+    let startX = (width - totalWidth) / 2;
+
+    const currentArchive = getURLParam('config') || 'A';
+    
+    const archives = ['A', 'B', 'C'];
+    
+    for (let i = 0; i < archives.length; i++) {
+        const archive = archives[i];
+        const x = startX + i * (btnW + spacing);
+        
+        // 如果是当前加载的存档，使用高亮颜色
+        if (archive === currentArchive) {
+            fill(50, 150, 50); // 选中绿色
+        } else {
+            fill(180); // 未选中灰色
+        }
+        
+        rectMode(CORNER);
+        rect(x, btnY, btnW, btnH, 5);
+        
+        // 绘制文字
+        fill(archive === currentArchive ? 255 : 50);
+        textSize(16);
+        text(`Config ${archive}`, x + btnW / 2, btnY + btnH / 2);
+    }
 }
 
-// P2 绘制 (口味)
+
+
+// P2 绘制 (口味) - **使用 flavorList 动态数据**
 function drawFlavorPage() {
     fill(50);
     textSize(30);
@@ -169,8 +227,8 @@ function drawFlavorPage() {
 
     rectMode(CORNER); 
 
-    for (let i = 0; i < flavors.length; i++) {
-        let flavor = flavors[i];
+    for (let i = 0; i < flavorList.length; i++) {
+        let flavor = flavorList[i];
         let row = floor(i / cols);
         let col = i % cols;
 
@@ -190,13 +248,14 @@ function drawFlavorPage() {
             fill(255); 
         }
         textSize(16);
-        text(flavor.name, x + itemSize / 2, y + itemSize / 2);
+        // 使用后端提供的口味名称
+        text(flavor.name, x + itemSize / 2, y + itemSize / 2); 
     }
     
     drawNextButton();
 }
 
-// P3 绘制 (抽象图片)
+// P3 绘制 (抽象图片) - **使用 abstractList 动态数据和加载的图片**
 function drawAbstractPage() {
     fill(50);
     textSize(30);
@@ -212,17 +271,29 @@ function drawAbstractPage() {
 
     rectMode(CORNER); 
 
-    for (let i = 0; i < abstractImages.length; i++) {
-        let img = abstractImages[i];
+    for (let i = 0; i < abstractList.length; i++) {
+        let img = abstractList[i];
         let row = floor(i / cols);
         let col = i % cols;
 
         let x = startX + col * (itemSize + spacing);
         let y = startY + row * (itemSize + spacing);
         
-        fill(img.placeholderColor);
-        rect(x, y, itemSize, itemSize, 15); 
+        const p5Image = loadedImages[img.id];
 
+        if (p5Image) {
+            // 绘制真实图片
+            image(p5Image, x, y, itemSize, itemSize);
+        } else {
+            // 绘制无图片的占位符 (如果图片加载失败或没有 url)
+            fill(150);
+            rect(x, y, itemSize, itemSize, 15);
+            fill(255);
+            textSize(14);
+            text("无图", x + itemSize / 2, y + itemSize / 2);
+        }
+        
+        // 绘制选中边框
         if (img.isSelected) {
             noFill();
             stroke(255, 0, 0); 
@@ -230,17 +301,13 @@ function drawAbstractPage() {
             rect(x, y, itemSize, itemSize, 15);
             noStroke(); 
         }
-        
-        fill(255);
-        textSize(14);
-        text(img.id, x + itemSize / 2, y + itemSize / 2);
     }
     
     drawBackButton();
     drawNextButton();
 }
 
-// P4 绘制 (心情小人)
+// P4 绘制 (心情小人) - **使用 moodList 动态数据和加载的图片**
 function drawMoodPage() {
     fill(50);
     textSize(30);
@@ -256,17 +323,29 @@ function drawMoodPage() {
 
     rectMode(CORNER); 
 
-    for (let i = 0; i < moodImages.length; i++) {
-        let mood = moodImages[i];
+    for (let i = 0; i < moodList.length; i++) {
+        let mood = moodList[i];
         let row = floor(i / cols);
         let col = i % cols;
 
         let x = startX + col * (itemSize + spacing);
         let y = startY + row * (itemSize + spacing);
         
-        fill(mood.placeholderColor);
-        rect(x, y, itemSize, itemSize, 15); 
+        const p5Image = loadedImages[mood.id];
 
+        if (p5Image) {
+            // 绘制真实图片
+            image(p5Image, x, y, itemSize, itemSize);
+        } else {
+             // 绘制无图片的占位符
+            fill(150);
+            rect(x, y, itemSize, itemSize, 15);
+            fill(255);
+            textSize(14);
+            text("无图", x + itemSize / 2, y + itemSize / 2);
+        }
+
+        // 绘制选中边框
         if (mood.isSelected) {
             noFill();
             stroke(0, 0, 255); 
@@ -274,47 +353,39 @@ function drawMoodPage() {
             rect(x, y, itemSize, itemSize, 15);
             noStroke(); 
         }
-        
-        fill(255);
-        textSize(14);
-        text(mood.id, x + itemSize / 2, y + itemSize / 2);
     }
     
     drawBackButton();
     drawNextButton();
 }
 
-// P5 绘制 (魔法动画)
+// P5 绘制 (魔法动画) (保持不变，但元素现在来自 selectedItems)
 function drawAnimation() {
-    // 绘制魔法桶 (中央的汇聚点)
+    // ... (保持 drawAnimation 函数不变)
     const center = { x: width / 2, y: height / 2 };
     const bucketSize = 150;
     
     // 绘制光芒/背景效果
     noStroke();
     for (let i = 0; i < 5; i++) {
-        fill(150, 150, 255, 50 - i * 10); // 柔和的光晕
+        fill(150, 150, 255, 50 - i * 10); 
         ellipse(center.x, center.y, bucketSize * 2 + i * 20, bucketSize * 2 + i * 20);
     }
     
-    fill(50, 50, 150, 200); // 桶的主体颜色
+    fill(50, 50, 150, 200); 
     ellipse(center.x, center.y, bucketSize, bucketSize + 50);
 
     text('混合中...请稍候', width / 2, height / 2 + 100);
     
-    // 动画计时和进度计算
     const elapsedTime = millis() - animationStartTime;
     let t = map(elapsedTime, 0, ANIMATION_DURATION, 0, 1);
     t = constrain(t, 0, 1); 
 
-    // 平滑动画效果
     const easedT = sin(t * PI/2); 
 
-    // 绘制飞入的元素
     for (let i = 0; i < selectedItems.length; i++) {
         let item = selectedItems[i];
         
-        // 计算起始位置 (从四个角落分散开始)
         let startX, startY;
         if (i % 4 === 0) { startX = -100; startY = random(height); } 
         else if (i % 4 === 1) { startX = width + 100; startY = random(height); } 
@@ -329,40 +400,37 @@ function drawAnimation() {
         
         let currentSize = lerp(30, 15, easedT); 
 
-        // 绘制为不同形状以区分类型
         if (item.type === 'flavor') {
-            rect(currentX, currentY, currentSize, currentSize); // 方块代表口味
+            rect(currentX, currentY, currentSize, currentSize); 
         } else if (item.type === 'abstract') {
-            triangle(currentX, currentY - currentSize, currentX - currentSize, currentY + currentSize, currentX + currentSize, currentY + currentSize); // 三角形代表抽象图
+            triangle(currentX, currentY - currentSize, currentX - currentSize, currentY + currentSize, currentX + currentSize, currentY + currentSize); 
         } else { // mood
-            ellipse(currentX, currentY, currentSize, currentSize); // 圆形代表心情小人
+            ellipse(currentX, currentY, currentSize, currentSize); 
         }
     }
     
-    // 动画结束时自动跳转
     if (t >= 1) {
         currentPage = PAGES.REPORT;
-        console.log('动画结束，切换到报告页 (P6)');
     }
 }
 
-// P6 绘制 (报告页)
+// P6 绘制 (报告页) - **新增计算推荐口味的逻辑**
 function drawReportPage() {
     fill(50);
     textSize(40);
     text('✨ 魔法冰淇淋报告 ✨', width / 2, 100);
     
-    // 报告的核心功能 (推荐口味)
+    // 调用推荐算法 (简化版)
+    const recommendedFlavor = calculateRecommendation();
+
     textSize(25);
     fill(255, 0, 0); 
-    text('【您的推荐口味】: 待计算!', width / 2, height / 2);
+    text(`【您的推荐口味】: ${recommendedFlavor || '暂无推荐'}`, width / 2, height / 2);
     
-    // 汇总信息
     fill(100);
     textSize(18);
     text(`您选择了 ${selectedItems.length} 个元素进行混合。`, width / 2, height / 2 + 50);
     
-    // 示例：展示客户选择的元素数量
     const flavorCount = selectedItems.filter(i => i.type === 'flavor').length;
     const abstractCount = selectedItems.filter(i => i.type === 'abstract').length;
     const moodCount = selectedItems.filter(i => i.type === 'mood').length;
@@ -370,7 +438,52 @@ function drawReportPage() {
     text(`口味(${flavorCount}) | 抽象图(${abstractCount}) | 心情小人(${moodCount})`, width / 2, height / 2 + 80);
     
     textSize(14);
-    text('（下一步我们将添加推荐算法和后台编辑功能）', width / 2, height - 30);
+    text('（推荐基于您在后台设置的权重。）', width / 2, height - 30);
+}
+
+
+// ===================================
+// ** 推荐算法核心 **
+// ===================================
+
+function calculateRecommendation() {
+    if (selectedItems.length === 0) {
+        return "请至少选择一个选项。";
+    }
+
+    // 初始化所有口味的总权重
+    let totalWeights = {};
+    flavorList.forEach(f => totalWeights[f.id] = 0);
+
+    // 1. 遍历所有被选中的抽象图和心情小人
+    const scoredItems = [...abstractList.filter(a => a.isSelected), ...moodList.filter(m => m.isSelected)];
+
+    scoredItems.forEach(item => {
+        // item.weights 存储了它对每个口味的权重
+        for (const flavorId in item.weights) {
+            // 累加权重
+            totalWeights[flavorId] += item.weights[flavorId];
+        }
+    });
+
+    // 2. 找到最高权重的口味
+    let maxWeight = -1;
+    let recommendedFlavorId = null;
+
+    for (const flavorId in totalWeights) {
+        if (totalWeights[flavorId] > maxWeight) {
+            maxWeight = totalWeights[flavorId];
+            recommendedFlavorId = flavorId;
+        }
+    }
+
+    // 3. 转换为口味名称
+    if (recommendedFlavorId) {
+        const recommendedFlavor = flavorList.find(f => f.id === recommendedFlavorId);
+        return recommendedFlavor ? recommendedFlavor.name : "未知口味";
+    }
+
+    return "（未找到相关性最高的口味）";
 }
 
 
@@ -378,10 +491,39 @@ function drawReportPage() {
 // ** 交互处理函数 **
 // ===================================
 
-// p5.js 函数：当鼠标被点击时执行
+
+
+// 交互处理函数
 function mouseClicked() {
+    if (!assetsLoaded) return; 
+
     if (currentPage === PAGES.COVER) {
         handleCoverClick();
+        
+        // *** 新增：检查存档切换点击 ***
+        const btnY = height - 50;
+        const btnW = 80;
+        const btnH = 30;
+        const spacing = 10;
+        const totalWidth = 3 * btnW + 2 * spacing;
+        let startX = (width - totalWidth) / 2;
+        
+        const archives = ['A', 'B', 'C'];
+        
+        for (let i = 0; i < archives.length; i++) {
+            const archive = archives[i];
+            const x = startX + i * (btnW + spacing);
+            
+            if (mouseX > x && mouseX < x + btnW && 
+                mouseY > btnY && mouseY < btnY + btnH) {
+                
+                // 强制浏览器跳转到新的 URL 并带上 config 参数
+                window.location.href = `index.html?config=${archive}`;
+                return; // 阻止同时触发“开始测试”
+            }
+        }
+        // ********************************
+
     } else if (currentPage === PAGES.FLAVOR_SELECT) {
         handleFlavorClick();
     } else if (currentPage === PAGES.ABSTRACT_SELECT) {
@@ -389,15 +531,15 @@ function mouseClicked() {
     } else if (currentPage === PAGES.MOOD_SELECT) {
         handleMoodClick();
     }
-    // 动画和报告页不需要点击处理
 }
+
 
 // 收集所有选中的元素 (P5 开始前调用)
 function collectSelections() {
     selectedItems = [];
     
     // 1. 收集选中的口味 (P2)
-    const selectedFlavors = flavors.filter(f => f.isSelected);
+    const selectedFlavors = flavorList.filter(f => f.isSelected);
     selectedItems.push(...selectedFlavors.map(f => ({ 
         type: 'flavor', 
         id: f.id, 
@@ -405,19 +547,21 @@ function collectSelections() {
     })));
 
     // 2. 收集选中的抽象图片 (P3)
-    const selectedAbstract = abstractImages.filter(a => a.isSelected);
+    const selectedAbstract = abstractList.filter(a => a.isSelected);
     selectedItems.push(...selectedAbstract.map(a => ({ 
         type: 'abstract', 
         id: a.id, 
-        color: a.placeholderColor 
+        // 动画使用一个默认颜色，避免加载图片的复杂性
+        color: color(random(255), random(255), random(255)) 
     })));
 
     // 3. 收集选中的心情小人 (P4)
-    const selectedMood = moodImages.filter(m => m.isSelected);
+    const selectedMood = moodList.filter(m => m.isSelected);
     selectedItems.push(...selectedMood.map(m => ({ 
         type: 'mood', 
         id: m.id, 
-        color: m.placeholderColor 
+        // 动画使用一个默认颜色
+        color: color(random(255), random(255), random(255)) 
     })));
 }
 
@@ -437,13 +581,11 @@ function handleCoverClick() {
 
 // P2 口味选择页点击处理
 function handleFlavorClick() {
-    // 1. 检查是否点击了“下一步”按钮
     if (checkNextButtonClick()) {
         currentPage = PAGES.ABSTRACT_SELECT;
         return; 
     }
     
-    // 2. 检查是否点击了口味方块
     const cols = 6;
     const itemSize = 100;
     const spacing = 10;
@@ -451,8 +593,8 @@ function handleFlavorClick() {
     const startX = (width - totalWidth) / 2;
     const startY = 120; 
 
-    for (let i = 0; i < flavors.length; i++) {
-        let flavor = flavors[i];
+    for (let i = 0; i < flavorList.length; i++) {
+        let flavor = flavorList[i];
         let row = floor(i / cols);
         let col = i % cols;
 
@@ -470,19 +612,16 @@ function handleFlavorClick() {
 
 // P3 抽象图片选择页点击处理
 function handleAbstractClick() {
-    // 1. 检查是否点击了“下一步”按钮
     if (checkNextButtonClick()) {
         currentPage = PAGES.MOOD_SELECT; 
         return; 
     }
     
-    // 2. 检查是否点击了“返回”按钮
     if (checkBackButtonClick()) {
         currentPage = PAGES.FLAVOR_SELECT; 
         return;
     }
 
-    // 3. 检查是否点击了抽象图片方块
     const cols = 4;
     const itemSize = 150;
     const spacing = 20;
@@ -490,8 +629,8 @@ function handleAbstractClick() {
     const startX = (width - totalWidth) / 2;
     const startY = 120; 
 
-    for (let i = 0; i < abstractImages.length; i++) {
-        let img = abstractImages[i];
+    for (let i = 0; i < abstractList.length; i++) {
+        let img = abstractList[i];
         let row = floor(i / cols);
         let col = i % cols;
 
@@ -509,22 +648,18 @@ function handleAbstractClick() {
 
 // P4 心情小人选择页点击处理
 function handleMoodClick() {
-    // 1. 检查是否点击了“下一步”按钮
     if (checkNextButtonClick()) {
-        // 在跳转动画页前，收集所有用户的选择
         collectSelections();
-        animationStartTime = millis(); // 记录动画开始的毫秒数
+        animationStartTime = millis(); 
         currentPage = PAGES.ANIMATION; 
         return; 
     }
     
-    // 2. 检查是否点击了“返回”按钮
     if (checkBackButtonClick()) {
         currentPage = PAGES.ABSTRACT_SELECT; 
         return;
     }
 
-    // 3. 检查是否点击了心情小人方块
     const cols = 4;
     const itemSize = 150;
     const spacing = 20;
@@ -532,8 +667,8 @@ function handleMoodClick() {
     const startX = (width - totalWidth) / 2;
     const startY = 120; 
 
-    for (let i = 0; i < moodImages.length; i++) {
-        let mood = moodImages[i];
+    for (let i = 0; i < moodList.length; i++) {
+        let mood = moodList[i];
         let row = floor(i / cols);
         let col = i % cols;
 

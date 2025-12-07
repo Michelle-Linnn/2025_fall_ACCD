@@ -1,0 +1,180 @@
+{
+  "archiveName": "CONFIG B - 圣诞限定版",
+  "flavorList": [
+    { 
+      "id": "F01", 
+      "name": "香草天空", 
+      "url": "", 
+      "placeholderColor": "#F3E5AB"
+    },
+    { 
+      "id": "F02", 
+      "name": "开心果花园", 
+      "url": "", 
+      "placeholderColor": "#85C79E"
+    },
+    { 
+      "id": "F03", 
+      "name": "草莓派对", 
+      "url": "", 
+      "placeholderColor": "#FFC0CB"
+    },
+    { 
+      "id": "F04", 
+      "name": "黑巧深渊", 
+      "url": "", 
+      "placeholderColor": "#3C1F1F"
+    },
+    { 
+      "id": "F05", 
+      "name": "焦糖海盐", 
+      "url": "", 
+      "placeholderColor": "#E0B070"
+    },
+    { 
+      "id": "F06", 
+      "name": "抹茶禅意", 
+      "url": "", 
+      "placeholderColor": "#9CBF96"
+    },
+    { 
+      "id": "F07", 
+      "name": "蓝莓月光", 
+      "url": "", 
+      "placeholderColor": "#6A5ACD"
+    },
+    { 
+      "id": "F08", 
+      "name": "芒果热情", 
+      "url": "", 
+      "placeholderColor": "#FFD700"
+    },
+    { 
+      "id": "F09", 
+      "name": "咖啡觉醒", 
+      "url": "", 
+      "placeholderColor": "#4B3621"
+    },
+    { 
+      "id": "F10", 
+      "name": "酸奶清风", 
+      "url": "", 
+      "placeholderColor": "#F5F5DC"
+    },
+    { 
+      "id": "F11", 
+      "name": "提拉米苏", 
+      "url": "", 
+      "placeholderColor": "#D2B48C"
+    },
+    { 
+      "id": "F12", 
+      "name": "红酒玫瑰", 
+      "url": "", 
+      "placeholderColor": "#8B0000"
+    },
+    { 
+      "id": "F13", 
+      "name": "柠檬汽水", 
+      "url": "", 
+      "placeholderColor": "#FFFF99"
+    },
+    { 
+      "id": "F14", 
+      "name": "黑芝麻糊", 
+      "url": "", 
+      "placeholderColor": "#333333"
+    },
+    { 
+      "id": "F15", 
+      "name": "芋泥啵啵", 
+      "url": "", 
+      "placeholderColor": "#DDA0DD"
+    },
+    { 
+      "id": "F16", 
+      "name": "山楂蜜饯", 
+      "url": "", 
+      "placeholderColor": "#B22222"
+    },
+    { 
+      "id": "F17", 
+      "name": "椰子奶油", 
+      "url": "", 
+      "placeholderColor": "#F0FFF0"
+    },
+    { 
+      "id": "F18", 
+      "name": "百香果狂欢", 
+      "url": "", 
+      "placeholderColor": "#DAA520"
+    },
+    { 
+      "id": "F19", 
+      "name": "生姜蜂蜜", 
+      "url": "", 
+      "placeholderColor": "#F5DEB3"
+    },
+    { 
+      "id": "F20", 
+      "name": "薄荷清新", 
+      "url": "", 
+      "placeholderColor": "#98FB98"
+    },
+    { 
+      "id": "F21", 
+      "name": "海苔脆片", 
+      "url": "", 
+      "placeholderColor": "#4C4C4C"
+    },
+    { 
+      "id": "F22", 
+      "name": "榴莲忘返", 
+      "url": "", 
+      "placeholderColor": "#ADFF2F"
+    },
+    { 
+      "id": "F23", 
+      "name": "酒心太妃糖", 
+      "url": "", 
+      "placeholderColor": "#D2B48C"
+    },
+    { 
+      "id": "F24", 
+      "name": "肉桂苹果派", 
+      "url": "", 
+      "placeholderColor": "#CD853F"
+    }
+  ],
+  "abstractList": [
+    {
+      "id": "A1",
+      "name": "深蓝色漩涡",
+      "url": "",
+      "weights": { 
+        "F01": 10, "F02": 5, "F03": 80, "F04": 20, "F05": 5, "F06": 10, "F07": 70, "F08": 5, "F09": 10, "F10": 15, "F11": 10, "F12": 60,
+        "F13": 50, "F14": 10, "F15": 20, "F16": 60, "F17": 5, "F18": 10, "F19": 5, "F20": 40, "F21": 5, "F22": 10, "F23": 20, "F24": 15
+      }
+    },
+    {
+      "id": "A2",
+      "name": "温暖橘色光晕",
+      "url": "",
+      "weights": { 
+        "F01": 90, "F02": 15, "F03": 10, "F04": 5, "F05": 70, "F06": 10, "F07": 5, "F08": 85, "F09": 40, "F10": 20, "F11": 50, "F12": 10,
+        "F13": 20, "F14": 40, "F15": 5, "F16": 10, "F17": 80, "F18": 90, "F19": 15, "F20": 5, "F21": 5, "F22": 5, "F23": 70, "F24": 95
+      }
+    }
+  ],
+  "moodList": [
+    {
+      "id": "M1",
+      "name": "大笑小人",
+      "url": "",
+      "weights": { 
+        "F01": 80, "F02": 50, "F03": 95, "F04": 10, "F05": 60, "F06": 10, "F07": 40, "F08": 90, "F09": 15, "F10": 80, "F11": 40, "F12": 20,
+        "F13": 70, "F14": 5, "F15": 90, "F16": 5, "F17": 70, "F18": 60, "F19": 10, "F20": 90, "F21": 5, "F22": 85, "F23": 10, "F24": 40
+      }
+    }
+  ]
+}

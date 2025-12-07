@@ -1,28 +1,159 @@
 {
   "archiveName": "CONFIG A",
   "flavorList": [
-    { "id": "V", "name": "Vanilla" },
-    { "id": "P", "name": "Pistachio" },
-    { "id": "S", "name": "Strawberry" },
-    { "id": "C", "name": "Chocolate" }
-    
+    {
+      "id": "V",
+      "name": "Giandujotto",
+      "url": "",
+      "placeholderColor": "#6A272C"
+    },
+    {
+      "id": "P",
+      "name": "A4 - 15",
+      "url": "/public/images/1765097011981_A4 - 15.png",
+      "placeholderColor": "#223E5A"
+    },
+    {
+      "id": "S",
+      "name": "A4 - 15",
+      "url": "/public/images/1765096998944_A4 - 15.png",
+      "placeholderColor": "#E28611"
+    },
+    {
+      "id": "C",
+      "name": "Cioccolato Belga",
+      "url": "",
+      "placeholderColor": "#2B10F0"
+    }
   ],
   "abstractList": [
     {
       "id": "A1",
-      "name": "深蓝色漩涡",
+      "name": "A4 - 19-18",
       "url": "",
-      "weights": { "V": 90, "P": 10, "S": 5, "C": 20 }
+      "weights": {
+        "V": 50,
+        "P": 50,
+        "S": 50,
+        "C": 50
+      }
+    },
+    {
+      "id": "A2",
+      "name": "IMG_2267",
+      "url": "",
+      "weights": {
+        "V": 50,
+        "P": 50,
+        "S": 50,
+        "C": 50
+      }
+    },
+    {
+      "id": "A3",
+      "name": "[t×6s]_[2acaf6e8-4e8b-41e9-9722-0a2316487dba]_2025-11-04_14-57-24",
+      "url": "",
+      "weights": {
+        "V": 50,
+        "P": 50,
+        "S": 50,
+        "C": 50
+      }
+    },
+    {
+      "id": "A4",
+      "name": "IMG_2169",
+      "url": "",
+      "weights": {
+        "V": 50,
+        "P": 50,
+        "S": 50,
+        "C": 50
+      }
+    },
+    {
+      "id": "A5",
+      "name": "抽象图 5",
+      "url": "",
+      "weights": {}
+    },
+    {
+      "id": "A6",
+      "name": "抽象图 6",
+      "url": "",
+      "weights": {}
+    },
+    {
+      "id": "A7",
+      "name": "抽象图 7",
+      "url": "",
+      "weights": {}
+    },
+    {
+      "id": "A8",
+      "name": "抽象图 8",
+      "url": "",
+      "weights": {}
     }
-    
   ],
   "moodList": [
     {
       "id": "M1",
-      "name": "开心小人",
+      "name": "A4 - 16",
+      "url": "/public/images/1765097084615_A4 - 16.png",
+      "weights": {
+        "V": 20,
+        "P": 5,
+        "S": 80,
+        "C": 10
+      }
+    },
+    {
+      "id": "M2",
+      "name": "A4 - 19-18",
+      "url": "/public/images/1765097104666_A4 - 19-18.png",
+      "weights": {
+        "V": 50,
+        "P": 50,
+        "S": 50,
+        "C": 50
+      }
+    },
+    {
+      "id": "M3",
+      "name": "心情小人 3",
       "url": "",
-      "weights": { "V": 20, "P": 5, "S": 80, "C": 10 }
+      "weights": {}
+    },
+    {
+      "id": "M4",
+      "name": "心情小人 4",
+      "url": "",
+      "weights": {}
+    },
+    {
+      "id": "M5",
+      "name": "心情小人 5",
+      "url": "",
+      "weights": {}
+    },
+    {
+      "id": "M6",
+      "name": "心情小人 6",
+      "url": "",
+      "weights": {}
+    },
+    {
+      "id": "M7",
+      "name": "心情小人 7",
+      "url": "",
+      "weights": {}
+    },
+    {
+      "id": "M8",
+      "name": "心情小人 8",
+      "url": "",
+      "weights": {}
     }
-    
   ]
 }
