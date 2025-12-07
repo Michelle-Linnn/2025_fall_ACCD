@@ -3,14 +3,14 @@
   "flavorList": [
     {
       "id": "V",
-      "name": "Giandujotto",
-      "url": "",
+      "name": "Dark chocolate flavor",
+      "url": "/public/images/Dark_chocolate_flavor-1765148055631-213040006.png",
       "placeholderColor": "#6A272C"
     },
     {
       "id": "P",
-      "name": "A4 - 15",
-      "url": "/public/images/1765097011981_A4 - 15.png",
+      "name": "Dark chocolate flavor",
+      "url": "/public/images/Dark_chocolate_flavor-1765148878990-562903431.png",
       "placeholderColor": "#223E5A"
     },
     {
@@ -30,7 +30,7 @@
     {
       "id": "A1",
       "name": "A4 - 19-18",
-      "url": "",
+      "url": "/public/images/Group_41-1765148072846-209912837.png",
       "weights": {
         "V": 50,
         "P": 50,
@@ -100,7 +100,7 @@
     {
       "id": "M1",
       "name": "A4 - 16",
-      "url": "/public/images/1765097084615_A4 - 16.png",
+      "url": "/public/images/Group_42-1765148087529-624999835.png",
       "weights": {
         "V": 20,
         "P": 5,

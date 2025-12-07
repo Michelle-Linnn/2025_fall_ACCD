@@ -77,6 +77,9 @@
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
             transition: border 0.2s ease;
         }
+        .image-item.selected {
+            border: 2px solid #007bff; /* 选中高亮 */
+        }
         .image-item img {
             width: 100%;
             height: 100px;
@@ -149,7 +152,7 @@
         <div class="upload-section">
             <input type="file" id="flavorImageUpload" accept="image/*">
             <button onclick="handleImageUpload('flavor')">上传 & 添加图片到当前选中口味</button>
-            <p style="margin-top: 5px;">*请先点击下方您要编辑的口味，使其高亮。</p>
+            <p style="margin-top: 5px;">*请先点击下方您要编辑的口味，使其高亮选中。</p>
         </div>
         
         <div id="flavorGrid" class="image-grid"></div>
@@ -199,18 +202,19 @@
     function getImageUrl(itemUrl) {
         if (!itemUrl) return '';
         
+        // **修复关键**：确保路径处理正确，无论是相对还是绝对路径
         let cleanUrl = itemUrl.replace(BACKEND_URL, '');
         
+        // 确保路径以斜杠开头，以便正确拼接
         if (!cleanUrl.startsWith('/')) {
             cleanUrl = '/' + cleanUrl;
         }
         
+        // 拼接成完整的绝对路径
         return `${BACKEND_URL}${cleanUrl}`;
     }
     
-    // Tab 切换函数... 
     let tabs = ['flavors', 'abstract', 'moods'];
-    let currentTabIndex = 0;
 
     function showTab(tabName) {
         tabs.forEach(tab => {
@@ -226,8 +230,6 @@
         const activeBtnElement = document.querySelector(`.tab-buttons button[onclick*="showTab('${tabName}')"]`);
         if (activeTabElement) activeTabElement.classList.add('active');
         if (activeBtnElement) activeBtnElement.classList.add('active');
-        
-        currentTabIndex = tabs.indexOf(tabName);
     }
     
     function getRandomColor() {
@@ -250,6 +252,7 @@
             let data;
 
             if (response.status === 404) {
+                // 如果文件不存在，创建默认配置
                 data = {
                     archiveName: `CONFIG ${name}`,
                     flavorList: Array(24).fill(0).map((_, i) => ({ id: `F${i+1}`, name: `口味 ${i+1}`, url: "", placeholderColor: getRandomColor() })),
@@ -262,12 +265,15 @@
                 throw new Error('加载存档失败');
             }
             
-            data.flavorList = data.flavorList.map(f => ({ 
+            // 确保 flavorList 至少有默认的24个位置
+            const defaultFlavors = Array(24).fill(0).map((_, i) => ({ id: `F${i+1}`, name: `口味 ${i+1}`, url: "", placeholderColor: getRandomColor() }));
+            data.flavorList = data.flavorList.concat(defaultFlavors.slice(data.flavorList.length)).slice(0, 24).map(f => ({ 
                 ...f, 
                 url: f.url || "", 
                 placeholderColor: f.placeholderColor || getRandomColor() 
             }));
 
+            // 确保 abstractList 和 moodList 至少有默认的8个位置
             const defaultAbstracts = Array(8).fill(0).map((_, i) => ({ id: `A${i+1}`, name: `抽象图 ${i+1}`, url: "", weights: {} }));
             data.abstractList = data.abstractList.concat(defaultAbstracts.slice(data.abstractList.length)).slice(0, 8);
 
@@ -278,6 +284,7 @@
             currentConfig = data;
             document.getElementById('currentArchiveName').textContent = `Config ${name} (${currentConfig.archiveName})`;
             
+            // 渲染所有组件
             renderFlavorEditor();
             renderImageGrid('abstract');
             renderImageGrid('moods');
@@ -302,22 +309,26 @@
             itemDiv.className = 'image-item';
             itemDiv.style.cursor = 'pointer'; 
 
+            // 选中高亮样式
             if (selectedFlavorId === flavor.id) {
-                 itemDiv.style.border = '2px solid #007bff';
+                 itemDiv.classList.add('selected');
             }
             
             itemDiv.onclick = () => {
                 selectedFlavorId = flavor.id;
-                renderFlavorEditor(); 
+                renderFlavorEditor(); // 重新渲染以更新高亮状态
             };
             
             const imageUrl = getImageUrl(flavor.url);
-            const imageHtml = imageUrl
+            
+            // **关键：口味图片显示逻辑**
+            const imageHtml = imageUrl && flavor.url 
                 ? `<img src="${imageUrl}" onerror="this.onerror=null;this.src='${BACKEND_URL}/placeholder.png';" alt="${flavor.name}">` 
                 : `<div style="height:100px; line-height:100px; background-color: ${flavor.placeholderColor};">无图</div>`;
             
             itemDiv.innerHTML = imageHtml;
             
+            // **关键：名称编辑输入框**
             itemDiv.innerHTML += `
                 <input type="text" class="flavor-input" value="${flavor.name}" 
                        onchange="updateFlavorName(this, '${flavor.id}')">
@@ -343,7 +354,7 @@
             itemDiv.style.cursor = 'pointer';
             
             if (item.id === selectedId) {
-                itemDiv.style.border = '2px solid #007bff';
+                itemDiv.classList.add('selected');
             }
             
             itemDiv.onclick = () => {
@@ -360,7 +371,7 @@
             
             const imageUrl = getImageUrl(item.url);
             
-            const imageHtml = imageUrl 
+            const imageHtml = imageUrl && item.url
                 ? `<img src="${imageUrl}" onerror="this.onerror=null;this.src='${BACKEND_URL}/placeholder.png';" alt="${item.name}">` 
                 : `<div style="height:100px; line-height:100px; background-color: ${item.placeholderColor || '#eee'};">无图</div>`;
             
@@ -392,12 +403,14 @@
         });
     }
 
-    // --- 3. 数据更新函数 (保持不变) ---
+    // --- 3. 数据更新函数 ---
 
     function updateFlavorName(inputElement, flavorId) {
         const flavor = currentConfig.flavorList.find(f => f.id === flavorId);
         if (flavor) {
+            // 更新名称
             flavor.name = inputElement.value;
+            // 名称更新后，需要重新渲染抽象图和心情小人页的权重列表
             renderImageGrid('abstract');
             renderImageGrid('moods');
         }
@@ -414,7 +427,7 @@
         }
     }
 
-    // --- 4. 图片上传处理 (最终稳定版) ---
+    // --- 4. 图片上传处理 ---
 
     async function handleImageUpload(type) {
         
@@ -483,7 +496,11 @@
                     itemToUpdate.url = result.url;
                     
                     if (type === 'flavor') {
-                        itemToUpdate.name = file.name.substring(0, file.name.lastIndexOf('.')) || itemToUpdate.name; 
+                        // 尝试用文件名更新口味名，如果用户还没改
+                        const nameWithoutExt = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+                        if (itemToUpdate.name.includes('口味')) { // 仅当名称是默认值时更新
+                             itemToUpdate.name = nameWithoutExt.replace(/[-_]/g, ' '); 
+                        }
                         renderFlavorEditor(); 
                     } else {
                          renderImageGrid(type); 
@@ -507,7 +524,7 @@
         }
     }
     
-    // --- 5. 一键清除图片 (保持不变) ---
+    // --- 5. 清除图片和保存存档 (保持不变) ---
     
     function clearAllImages(type) {
         if (!confirm(`确定要清除所有 ${type === 'abstract' ? '抽象图' : '心情小人'} 的图片吗？（数据和权重会保留）`)) {
@@ -526,8 +543,6 @@
         showLoading(false);
         alert(`所有 ${type === 'abstract' ? '抽象图' : '心情小人'} 的图片已清除。请点击 '完成 & 保存配置' 按钮保存更改。`);
     }
-
-    // --- 6. 保存存档 (保持不变) ---
 
     async function saveArchive() {
         if (!currentConfig) {
@@ -561,6 +576,7 @@
         }
     }
     
+    // 页面加载后自动加载配置A
     loadArchive('A'); 
 </script>
 </body>
