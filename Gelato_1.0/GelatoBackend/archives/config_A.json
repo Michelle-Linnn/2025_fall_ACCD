@@ -9,21 +9,141 @@
     },
     {
       "id": "P",
-      "name": "Dark chocolate flavor",
+      "name": " flavor",
       "url": "/public/images/Dark_chocolate_flavor-1765148878990-562903431.png",
       "placeholderColor": "#223E5A"
     },
     {
       "id": "S",
-      "name": "A4 - 15",
-      "url": "/public/images/1765096998944_A4 - 15.png",
+      "name": "chocolate",
+      "url": "/public/images/Dark_chocolate_flavor-1765149692060-496288027.png",
       "placeholderColor": "#E28611"
     },
     {
       "id": "C",
       "name": "Cioccolato Belga",
-      "url": "",
+      "url": "/public/images/Dark_chocolate_flavor-1765149815654-500663520.png",
       "placeholderColor": "#2B10F0"
+    },
+    {
+      "id": "F5",
+      "name": "Group 42",
+      "url": "/public/images/Dark_chocolate_flavor-1765151776372-212869679.png",
+      "placeholderColor": "#FADBAF"
+    },
+    {
+      "id": "F6",
+      "name": "口味 6",
+      "url": "",
+      "placeholderColor": "#2FFE98"
+    },
+    {
+      "id": "F7",
+      "name": "口味 7",
+      "url": "",
+      "placeholderColor": "#410EEE"
+    },
+    {
+      "id": "F8",
+      "name": "口味 8",
+      "url": "",
+      "placeholderColor": "#1F97C2"
+    },
+    {
+      "id": "F9",
+      "name": "口味 9",
+      "url": "",
+      "placeholderColor": "#8AD5F9"
+    },
+    {
+      "id": "F10",
+      "name": "口味 10",
+      "url": "",
+      "placeholderColor": "#3D7850"
+    },
+    {
+      "id": "F11",
+      "name": "口味 11",
+      "url": "",
+      "placeholderColor": "#3EAFC0"
+    },
+    {
+      "id": "F12",
+      "name": "口味 12",
+      "url": "",
+      "placeholderColor": "#FD4E4B"
+    },
+    {
+      "id": "F13",
+      "name": "口味 13",
+      "url": "",
+      "placeholderColor": "#C80138"
+    },
+    {
+      "id": "F14",
+      "name": "口味 14",
+      "url": "",
+      "placeholderColor": "#2010DF"
+    },
+    {
+      "id": "F15",
+      "name": "口味 15",
+      "url": "",
+      "placeholderColor": "#C15C22"
+    },
+    {
+      "id": "F16",
+      "name": "口味 16",
+      "url": "",
+      "placeholderColor": "#5B9FCB"
+    },
+    {
+      "id": "F17",
+      "name": "口味 17",
+      "url": "",
+      "placeholderColor": "#1A94F4"
+    },
+    {
+      "id": "F18",
+      "name": "口味 18",
+      "url": "",
+      "placeholderColor": "#F2DBD2"
+    },
+    {
+      "id": "F19",
+      "name": "口味 19",
+      "url": "",
+      "placeholderColor": "#13FC7E"
+    },
+    {
+      "id": "F20",
+      "name": "口味 20",
+      "url": "",
+      "placeholderColor": "#A50A2F"
+    },
+    {
+      "id": "F21",
+      "name": "口味 21",
+      "url": "",
+      "placeholderColor": "#FED69B"
+    },
+    {
+      "id": "F22",
+      "name": "口味 22",
+      "url": "",
+      "placeholderColor": "#6D55A8"
+    },
+    {
+      "id": "F23",
+      "name": "口味 23",
+      "url": "",
+      "placeholderColor": "#FF7580"
+    },
+    {
+      "id": "F24",
+      "name": "口味 24",
+      "url": "",
+      "placeholderColor": "#B007C0"
     }
   ],
   "abstractList": [
