@@ -198,19 +198,19 @@
         document.getElementById('editorContent').style.display = show ? 'none' : 'block';
     }
 
-    // 路径标准化函数：确保前端总是以正确的绝对路径请求图片
+    // 路径标准化函数：修复图片路径问题 (关键修复)
     function getImageUrl(itemUrl) {
         if (!itemUrl) return '';
         
-        // **修复关键**：确保路径处理正确，无论是相对还是绝对路径
-        let cleanUrl = itemUrl.replace(BACKEND_URL, '');
+        // 移除所有可能的域名和端口，只保留相对路径
+        let cleanUrl = itemUrl.replace('http://localhost:3000', '');
         
-        // 确保路径以斜杠开头，以便正确拼接
+        // 确保路径以斜杠开头
         if (!cleanUrl.startsWith('/')) {
             cleanUrl = '/' + cleanUrl;
         }
         
-        // 拼接成完整的绝对路径
+        // 拼接成完整的 URL
         return `${BACKEND_URL}${cleanUrl}`;
     }
     
@@ -265,7 +265,7 @@
                 throw new Error('加载存档失败');
             }
             
-            // 确保 flavorList 至少有默认的24个位置
+            // 确保 flavorList 至少有默认的24个位置，并处理url和颜色
             const defaultFlavors = Array(24).fill(0).map((_, i) => ({ id: `F${i+1}`, name: `口味 ${i+1}`, url: "", placeholderColor: getRandomColor() }));
             data.flavorList = data.flavorList.concat(defaultFlavors.slice(data.flavorList.length)).slice(0, 24).map(f => ({ 
                 ...f, 
@@ -273,7 +273,6 @@
                 placeholderColor: f.placeholderColor || getRandomColor() 
             }));
 
-            // 确保 abstractList 和 moodList 至少有默认的8个位置
             const defaultAbstracts = Array(8).fill(0).map((_, i) => ({ id: `A${i+1}`, name: `抽象图 ${i+1}`, url: "", weights: {} }));
             data.abstractList = data.abstractList.concat(defaultAbstracts.slice(data.abstractList.length)).slice(0, 8);
 
@@ -321,14 +320,14 @@
             
             const imageUrl = getImageUrl(flavor.url);
             
-            // **关键：口味图片显示逻辑**
+            // 口味图片显示逻辑
             const imageHtml = imageUrl && flavor.url 
                 ? `<img src="${imageUrl}" onerror="this.onerror=null;this.src='${BACKEND_URL}/placeholder.png';" alt="${flavor.name}">` 
                 : `<div style="height:100px; line-height:100px; background-color: ${flavor.placeholderColor};">无图</div>`;
             
             itemDiv.innerHTML = imageHtml;
             
-            // **关键：名称编辑输入框**
+            // 名称编辑输入框
             itemDiv.innerHTML += `
                 <input type="text" class="flavor-input" value="${flavor.name}" 
                        onchange="updateFlavorName(this, '${flavor.id}')">
@@ -371,6 +370,7 @@
             
             const imageUrl = getImageUrl(item.url);
             
+            // 抽象图/心情小人图片显示逻辑
             const imageHtml = imageUrl && item.url
                 ? `<img src="${imageUrl}" onerror="this.onerror=null;this.src='${BACKEND_URL}/placeholder.png';" alt="${item.name}">` 
                 : `<div style="height:100px; line-height:100px; background-color: ${item.placeholderColor || '#eee'};">无图</div>`;
@@ -408,9 +408,9 @@
     function updateFlavorName(inputElement, flavorId) {
         const flavor = currentConfig.flavorList.find(f => f.id === flavorId);
         if (flavor) {
-            // 更新名称
+            // 核心：更新名称
             flavor.name = inputElement.value;
-            // 名称更新后，需要重新渲染抽象图和心情小人页的权重列表
+            // 名称更新后，必须重新渲染抽象图和心情小人页的权重列表，以便更新名称显示
             renderImageGrid('abstract');
             renderImageGrid('moods');
         }
@@ -493,6 +493,7 @@
                 const itemToUpdate = list.find(item => item.id === selectedIdToUpdate);
 
                 if (itemToUpdate) {
+                    // 更新 URL 字段
                     itemToUpdate.url = result.url;
                     
                     if (type === 'flavor') {
@@ -501,6 +502,7 @@
                         if (itemToUpdate.name.includes('口味')) { // 仅当名称是默认值时更新
                              itemToUpdate.name = nameWithoutExt.replace(/[-_]/g, ' '); 
                         }
+                        // 重新渲染口味列表，即时显示新图片和更新高亮
                         renderFlavorEditor(); 
                     } else {
                          renderImageGrid(type); 
@@ -524,7 +526,7 @@
         }
     }
     
-    // --- 5. 清除图片和保存存档 (保持不变) ---
+    // --- 5. 清除图片和保存存档 ---
     
     function clearAllImages(type) {
         if (!confirm(`确定要清除所有 ${type === 'abstract' ? '抽象图' : '心情小人'} 的图片吗？（数据和权重会保留）`)) {

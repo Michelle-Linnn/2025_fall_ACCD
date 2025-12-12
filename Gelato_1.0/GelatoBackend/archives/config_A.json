@@ -3,20 +3,20 @@
   "flavorList": [
     {
       "id": "V",
-      "name": "Dark chocolate flavor",
-      "url": "/public/images/Dark_chocolate_flavor-1765148055631-213040006.png",
+      "name": "Giandujotto",
+      "url": "/public/images/ä½¿ç¨å·¥å·çæå¾ç_(11)_70-1765185719482-771205297.png",
       "placeholderColor": "#6A272C"
     },
     {
       "id": "P",
-      "name": " flavor",
+      "name": "3Cioccolati",
       "url": "/public/images/Dark_chocolate_flavor-1765148878990-562903431.png",
       "placeholderColor": "#223E5A"
     },
     {
       "id": "S",
-      "name": "chocolate",
-      "url": "/public/images/Dark_chocolate_flavor-1765149692060-496288027.png",
+      "name": "Rosa&Vaniglia",
+      "url": "/public/images/ä½¿ç¨å·¥å·çæå¾ç_(11)_85-1765185514485-448690960.png",
       "placeholderColor": "#E28611"
     },
     {
@@ -27,116 +27,116 @@
     },
     {
       "id": "F5",
-      "name": "Group 42",
-      "url": "/public/images/Dark_chocolate_flavor-1765151776372-212869679.png",
+      "name": "Crema&Biscotti",
+      "url": "/public/images/ä½¿ç¨å·¥å·çæå¾ç_(11)_79-1765186008483-176857674.png",
       "placeholderColor": "#FADBAF"
     },
     {
       "id": "F6",
-      "name": "口味 6",
-      "url": "",
+      "name": "Buttercream",
+      "url": "/public/images/ä½¿ç¨å·¥å·çæå¾ç_(11)_70-1765186127702-643308572.png",
       "placeholderColor": "#2FFE98"
     },
     {
       "id": "F7",
-      "name": "口味 7",
-      "url": "",
+      "name": "Maple Cashew Brittle",
+      "url": "/public/images/Toffee_Chocolate_Flavor-1765187052853-979979281.png",
       "placeholderColor": "#410EEE"
     },
     {
       "id": "F8",
-      "name": "口味 8",
-      "url": "",
+      "name": "Bacio di Latte",
+      "url": "/public/images/ä½¿ç¨å·¥å·çæå¾ç_(11)_84-1765186152329-418702116.png",
       "placeholderColor": "#1F97C2"
     },
     {
       "id": "F9",
-      "name": "口味 9",
-      "url": "",
+      "name": "Cocco Rio",
+      "url": "/public/images/ä½¿ç¨å·¥å·çæå¾ç_(11)_88-1765186232536-886590979.png",
       "placeholderColor": "#8AD5F9"
     },
     {
       "id": "F10",
-      "name": "口味 10",
-      "url": "",
+      "name": "Crema Torino",
+      "url": "/public/images/ä½¿ç¨å·¥å·çæå¾ç_(11)_78-1765186260230-915108608.png",
       "placeholderColor": "#3D7850"
     },
     {
       "id": "F11",
-      "name": "口味 11",
-      "url": "",
+      "name": "Caffè&Caramellatte",
+      "url": "/public/images/ä½¿ç¨å·¥å·çæå¾ç_(11)_86-1765186324786-791594953.png",
       "placeholderColor": "#3EAFC0"
     },
     {
       "id": "F12",
-      "name": "口味 12",
-      "url": "",
+      "name": "Strawberry Cheese",
+      "url": "/public/images/ä½¿ç¨å·¥å·çæå¾ç_(11)_72-1765186364483-548315963.png",
       "placeholderColor": "#FD4E4B"
     },
     {
       "id": "F13",
-      "name": "口味 13",
-      "url": "",
+      "name": "Caramello Salato",
+      "url": "/public/images/ä½¿ç¨å·¥å·çæå¾ç_(11)_74-1765186485325-565533499.png",
       "placeholderColor": "#C80138"
     },
     {
       "id": "F14",
-      "name": "口味 14",
-      "url": "",
+      "name": "Peanut Butter",
+      "url": "/public/images/ä½¿ç¨å·¥å·çæå¾ç_(11)_81-1765186538399-122449996.png",
       "placeholderColor": "#2010DF"
     },
     {
       "id": "F15",
-      "name": "口味 15",
-      "url": "",
+      "name": "Pistacchio",
+      "url": "/public/images/ä½¿ç¨å·¥å·çæå¾ç_(11)_68-1765186685324-655839224.png",
       "placeholderColor": "#C15C22"
     },
     {
       "id": "F16",
-      "name": "口味 16",
-      "url": "",
+      "name": "Chocolate Pistacchip Crunch",
+      "url": "/public/images/ä½¿ç¨å·¥å·çæå¾ç_(11)_120-1765186814539-696768885.png",
       "placeholderColor": "#5B9FCB"
     },
     {
       "id": "F17",
-      "name": "口味 17",
-      "url": "",
+      "name": "Stracciatella",
+      "url": "/public/images/ä½¿ç¨å·¥å·çæå¾ç_(11)_121-1765186921689-999237766.png",
       "placeholderColor": "#1A94F4"
     },
     {
       "id": "F18",
-      "name": "口味 18",
-      "url": "",
+      "name": "Double Mascarpone",
+      "url": "/public/images/ä½¿ç¨å·¥å·çæå¾ç_(11)_77-1765186976253-59469969.png",
       "placeholderColor": "#F2DBD2"
     },
     {
       "id": "F19",
-      "name": "口味 19",
-      "url": "",
+      "name": "Vanilla Carmamel",
+      "url": "/public/images/ä½¿ç¨å·¥å·çæå¾ç_(11)_67-1765187070553-769166016.png",
       "placeholderColor": "#13FC7E"
     },
     {
       "id": "F20",
-      "name": "口味 20",
-      "url": "",
+      "name": "Cioccolato&Menta",
+      "url": "/public/images/ä½¿ç¨å·¥å·çæå¾ç_(11)_119-1765187101719-527739492.png",
       "placeholderColor": "#A50A2F"
     },
     {
       "id": "F21",
-      "name": "口味 21",
-      "url": "",
+      "name": "Organic Lampone",
+      "url": "/public/images/ä½¿ç¨å·¥å·çæå¾ç_(11)_82-1765187161507-958934273.png",
       "placeholderColor": "#FED69B"
     },
     {
       "id": "F22",
-      "name": "口味 22",
-      "url": "",
+      "name": "使用工具生成图片 (11) 122",
+      "url": "/public/images/ä½¿ç¨å·¥å·çæå¾ç_(11)_122-1765187474426-361714743.png",
       "placeholderColor": "#6D55A8"
     },
     {
       "id": "F23",
-      "name": "口味 23",
-      "url": "",
+      "name": "使用工具生成图片 (11) 79",
+      "url": "/public/images/ä½¿ç¨å·¥å·çæå¾ç_(11)_79-1765222952644-953074141.png",
       "placeholderColor": "#FF7580"
     },
     {
@@ -152,67 +152,142 @@
       "name": "A4 - 19-18",
       "url": "/public/images/Group_41-1765148072846-209912837.png",
       "weights": {
-        "V": 50,
-        "P": 50,
-        "S": 50,
-        "C": 50
+        "V": 15,
+        "P": 19,
+        "S": 19,
+        "C": 10,
+        "F24": 13,
+        "F11": 0,
+        "F15": 100,
+        "F14": 37,
+        "F13": 20,
+        "F12": 4,
+        "F10": 12,
+        "F16": 19,
+        "F17": 28,
+        "F18": 12,
+        "F19": 25,
+        "F20": 11,
+        "F21": 16,
+        "F22": 22,
+        "F23": 8,
+        "F9": 6,
+        "F7": 15,
+        "F8": 17,
+        "F5": 13,
+        "F6": 12
       }
     },
     {
       "id": "A2",
       "name": "IMG_2267",
-      "url": "",
+      "url": "/public/images/Group_43-1765221467278-944899838.png",
       "weights": {
-        "V": 50,
-        "P": 50,
-        "S": 50,
-        "C": 50
+        "V": 11,
+        "P": 16,
+        "S": 23,
+        "C": 7,
+        "F5": 5,
+        "F6": 5,
+        "F7": 5,
+        "F8": 0,
+        "F9": 0,
+        "F10": 0,
+        "F12": 1,
+        "F13": 1,
+        "F14": 1,
+        "F15": 0,
+        "F16": 3,
+        "F17": 5,
+        "F19": 18,
+        "F18": 16,
+        "F20": 100,
+        "F22": 21,
+        "F23": 18,
+        "F24": 28
       }
     },
     {
       "id": "A3",
       "name": "[t×6s]_[2acaf6e8-4e8b-41e9-9722-0a2316487dba]_2025-11-04_14-57-24",
-      "url": "",
+      "url": "/public/images/Group_45-1765221478416-167404596.png",
       "weights": {
-        "V": 50,
-        "P": 50,
-        "S": 50,
-        "C": 50
+        "V": 10,
+        "P": 12,
+        "S": 18,
+        "C": 17,
+        "F5": 8,
+        "F6": 4,
+        "F7": 24,
+        "F8": 24,
+        "F9": 17,
+        "F10": 18,
+        "F11": 100,
+        "F12": 21,
+        "F13": 21,
+        "F14": 32,
+        "F15": 32,
+        "F16": 8,
+        "F18": 29,
+        "F19": 3,
+        "F20": 0,
+        "F21": 2,
+        "F22": 7,
+        "F23": 7
       }
     },
     {
       "id": "A4",
       "name": "IMG_2169",
-      "url": "",
+      "url": "/public/images/Group_44-1765221492379-978794471.png",
       "weights": {
         "V": 50,
-        "P": 50,
-        "S": 50,
-        "C": 50
+        "P": 22,
+        "S": 21,
+        "C": 6,
+        "F5": 33,
+        "F6": 33,
+        "F8": 13,
+        "F9": 13,
+        "F10": 10,
+        "F11": 19,
+        "F12": 92,
+        "F13": 11,
+        "F14": 9,
+        "F15": 9,
+        "F16": 9,
+        "F17": 9,
+        "F18": 9,
+        "F19": 33,
+        "F20": 14,
+        "F21": 12,
+        "F22": 80,
+        "F23": 80,
+        "F24": 81
       }
     },
     {
       "id": "A5",
       "name": "抽象图 5",
-      "url": "",
+      "url": "/public/images/Group_55-1765221525319-371316857.png",
       "weights": {}
     },
     {
       "id": "A6",
       "name": "抽象图 6",
-      "url": "",
+      "url": "/public/images/Group_54-1765221539133-50416429.png",
       "weights": {}
     },
     {
       "id": "A7",
       "name": "抽象图 7",
-      "url": "",
+      "url": "/public/images/Group_46-1765221561352-212263512.png",
       "weights": {}
     },
     {
       "id": "A8",
       "name": "抽象图 8",
-      "url": "",
+      "url": "/public/images/ä½¿ç¨å·¥å·çæå¾ç_(12)_3-1765221595065-485558720.png",
       "weights": {}
     }
   ],
@@ -220,7 +295,7 @@
     {
       "id": "M1",
       "name": "A4 - 16",
-      "url": "/public/images/Group_42-1765148087529-624999835.png",
+      "url": "/public/images/Group_63-1765221639930-276492203.png",
       "weights": {
         "V": 20,
         "P": 5,
@@ -231,7 +306,7 @@
     {
       "id": "M2",
       "name": "A4 - 19-18",
-      "url": "/public/images/1765097104666_A4 - 19-18.png",
+      "url": "/public/images/Group_64-1765221648014-963018870.png",
       "weights": {
         "V": 50,
         "P": 50,
@@ -242,37 +317,37 @@
     {
       "id": "M3",
       "name": "心情小人 3",
-      "url": "",
+      "url": "/public/images/Group_65-1765221656782-393568257.png",
       "weights": {}
     },
     {
       "id": "M4",
       "name": "心情小人 4",
-      "url": "",
+      "url": "/public/images/Group_66-1765221665430-64466895.png",
       "weights": {}
     },
     {
       "id": "M5",
       "name": "心情小人 5",
-      "url": "",
+      "url": "/public/images/Group_67-1765221721017-952137414.png",
       "weights": {}
     },
     {
       "id": "M6",
       "name": "心情小人 6",
-      "url": "",
+      "url": "/public/images/Group_68-1765221734148-675884283.png",
       "weights": {}
     },
     {
       "id": "M7",
       "name": "心情小人 7",
-      "url": "",
+      "url": "/public/images/Group_69-1765221746848-997888640.png",
       "weights": {}
     },
     {
       "id": "M8",
       "name": "心情小人 8",
-      "url": "",
+      "url": "/public/images/Group_70-1765221756479-318978431.png",
       "weights": {}
     }
   ]

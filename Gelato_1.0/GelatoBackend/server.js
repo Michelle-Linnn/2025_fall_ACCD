@@ -8,14 +8,14 @@ const app = express();
 const PORT = 3000;
 
 // =========================================================
-// == 1. 精确路径定义（针对您的文件结构） ==
+// == 1. 精确路径定义（关键：定位所有文件夹） ==
 // =========================================================
 
 // __dirname 是 server.js 所在的目录 (Gelato_1.0/GelatoBackend)
 const BACKEND_DIR = __dirname;
 const PROJECT_ROOT_DIR = path.join(BACKEND_DIR, '..'); // Gelato_1.0
 
-// index.html 所在的目录 (Gelato_1.0/GelatoTest)
+// index.html 及其资源 (style.css, sketch.js) 所在的目录
 const GELATO_TEST_DIR = path.join(PROJECT_ROOT_DIR, 'GelatoTest'); 
 
 // 核心目录
@@ -33,11 +33,16 @@ app.use(cors());
 app.use(express.json());
 
 // =========================================================
-// == 2. 配置静态文件服务 & Multer ==
+// == 2. 配置静态文件服务（解决 CSS/JS 404 问题） ==
 // =========================================================
 
-// 只提供 public/ 目录下的静态资源 (图片)
+// **【修复点 1】**：允许浏览器访问 public/ 目录下的静态资源 (图片)
 app.use('/public', express.static(PUBLIC_DIR)); 
+
+// **【修复点 2】**：允许浏览器访问 GelatoTest 目录下的资源（style.css, sketch.js）
+// 当浏览器请求 /style.css 时，Express 会去 GELATO_TEST_DIR 中查找
+app.use(express.static(GELATO_TEST_DIR)); 
+
 
 // 配置 Multer 用于文件上传
 const storage = multer.diskStorage({
@@ -55,7 +60,7 @@ const upload = multer({ storage: storage });
 
 
 // =========================================================
-// == 3. API 路由 ==
+// == 3. API 路由 (功能代码) ==
 // =========================================================
 
 // 加载配置存档
@@ -106,7 +111,7 @@ app.post('/api/upload/image', upload.single('imageFile'), (req, res) => {
 
 
 // =========================================================
-// == 4. 关键修复：精确路由到 HTML 文件 ==
+// == 4. 精确路由到 HTML 文件（关键：定位 index.html 和 admin.html） ==
 // =========================================================
 
 // 1. 路由到后台配置页：admin.html (位于 GelatoBackend 目录)
@@ -125,13 +130,7 @@ app.get(['/', '/index.html'], (req, res) => {
     if (fs.existsSync(filePath)) {
         res.sendFile(filePath);
     } else {
-        // 如果找不到，尝试查找根目录下的 index.html（以防万一）
-        const rootFilePath = path.join(PROJECT_ROOT_DIR, 'index.html');
-        if (fs.existsSync(rootFilePath)) {
-            res.sendFile(rootFilePath);
-        } else {
-            res.status(404).send('Cannot find index.html. Check both GelatoTest and project root folders.');
-        }
+        res.status(404).send('Cannot find index.html in GelatoTest folder.');
     }
 });
 
